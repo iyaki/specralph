@@ -1,7 +1,8 @@
 ---
 description: Never use --no-verify or -n to bypass git hooks. Fix pre-commit failures at their source.
 condition:
-  - "--no-verify"
+  - "(?i)\\bgit commit\\b.* -n"
+  - "(?i)\\bgit\\b.*--no-verify"
 scope:
   - "tool:bash"
 interruptMode: "always"
