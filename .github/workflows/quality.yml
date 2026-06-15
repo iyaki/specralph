@@ -60,6 +60,7 @@ jobs:
           file: cobertura.xml
           language: Go
           label: code-coverage/go
+          fail-on-error: false
 
   arch:
     runs-on: ubuntu-latest
