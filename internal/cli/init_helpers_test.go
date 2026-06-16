@@ -1,17 +1,15 @@
 //nolint:funlen,testpackage,gocognit,cyclop
-//nolint:testpackage
-//nolint:testpackage
 package cli
 
 import (
 	"bytes"
 	"os"
 	"strings"
+	"io"
 	"testing"
 
 	"github.com/BurntSushi/toml"
 	"github.com/iyaki/ralphex/internal/config"
-	_ "github.com/iyaki/ralphex/internal/config"
 )
 
 func TestBuildInitPreviewLines(t *testing.T) {
@@ -546,4 +544,175 @@ func TestPrintInitPreview(t *testing.T) {
 	if !strings.Contains(output, "agent: opencode") {
 		t.Error("expected \"agent: opencode\" in output")
 	}
+}
+
+// mockAnswerReader implements answerReader for testing.
+type mockAnswerReader struct {
+	answers []string
+	index   int
+}
+
+func (m *mockAnswerReader) ReadAnswer() (string, error) {
+	if m.index >= len(m.answers) {
+		return "", io.EOF
+	}
+	answer := m.answers[m.index]
+
+	m.index++
+
+	return answer, nil
+}
+
+func TestConfirmExistingConfigOverwriteWithReader(t *testing.T) {
+	t.Run("user confirms overwrite", func(t *testing.T) {
+		session := &InitSession{
+			Writer: &bytes.Buffer{},
+		}
+		reader := &mockAnswerReader{answers: []string{"yes"}}
+
+		confirmed, err := confirmExistingConfigOverwriteWithReader(session, reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !confirmed {
+			t.Error("expected confirmed=true")
+		}
+	})
+
+	t.Run("user declines overwrite", func(t *testing.T) {
+		session := &InitSession{
+			Writer: &bytes.Buffer{},
+		}
+		reader := &mockAnswerReader{answers: []string{"no"}}
+
+		confirmed, err := confirmExistingConfigOverwriteWithReader(session, reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if confirmed {
+			t.Error("expected confirmed=false")
+		}
+	})
+}
+
+func TestConfirmInitWriteWithReader(t *testing.T) {
+	t.Run("user confirms write", func(t *testing.T) {
+		session := &InitSession{
+			Writer:  &bytes.Buffer{},
+			Answers: &InitAnswers{AgentName: "opencode"},
+		}
+		reader := &mockAnswerReader{answers: []string{"yes"}}
+
+		confirmed, err := confirmInitWriteWithReader(session, reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !confirmed {
+			t.Error("expected confirmed=true")
+		}
+		if !session.Confirmed {
+			t.Error("expected session.Confirmed=true")
+		}
+	})
+
+	t.Run("user declines write", func(t *testing.T) {
+		session := &InitSession{
+			Writer:  &bytes.Buffer{},
+			Answers: &InitAnswers{AgentName: "opencode"},
+		}
+		reader := &mockAnswerReader{answers: []string{"no"}}
+
+		confirmed, err := confirmInitWriteWithReader(session, reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if confirmed {
+			t.Error("expected confirmed=false")
+		}
+		if session.Confirmed {
+			t.Error("expected session.Confirmed=false")
+		}
+	})
+}
+
+func TestPromptForAnswerWithReader(t *testing.T) {
+	t.Run("valid answer on first try", func(t *testing.T) {
+		session := &InitSession{
+			Writer: &bytes.Buffer{},
+		}
+		question := InitQuestion{
+			Key:  "agent",
+			Prompt: "Which agent?",
+			Type: "input",
+		}
+		reader := &mockAnswerReader{answers: []string{"opencode"}}
+
+		answer, err := promptForAnswerWithReader(session, question, reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if answer != "opencode" {
+			t.Errorf("expected \"opencode\", got %q", answer)
+		}
+	})
+
+	t.Run("retries after invalid answer", func(t *testing.T) {
+		session := &InitSession{
+			Writer: &bytes.Buffer{},
+		}
+		question := InitQuestion{
+			Key:  "confirm",
+			Prompt: "Continue?",
+			Type: "confirm",
+		}
+		// First invalid, then valid
+		reader := &mockAnswerReader{answers: []string{"invalid", "yes"}}
+
+		answer, err := promptForAnswerWithReader(session, question, reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if answer != "yes" {
+			t.Errorf("expected \"yes\", got %q", answer)
+		}
+	})
+}
+
+func TestAskSingleQuestionWithReader(t *testing.T) {
+	t.Run("returns answer from reader", func(t *testing.T) {
+		session := &InitSession{
+			Writer: &bytes.Buffer{},
+		}
+		question := InitQuestion{
+			Prompt: "Test?",
+		}
+		reader := &mockAnswerReader{answers: []string{"my-answer"}}
+
+		answer, err := askSingleQuestionWithReader(session, question, reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if answer != "my-answer" {
+			t.Errorf("expected \"my-answer\", got %q", answer)
+		}
+	})
+
+	t.Run("returns default on empty answer", func(t *testing.T) {
+		session := &InitSession{
+			Writer: &bytes.Buffer{},
+		}
+		question := InitQuestion{
+			Prompt: "Test?",
+			DefaultValue: "default-value",
+		}
+		reader := &mockAnswerReader{answers: []string{""}}
+
+		answer, err := askSingleQuestionWithReader(session, question, reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if answer != "default-value" {
+			t.Errorf("expected \"default-value\", got %q", answer)
+		}
+	})
 }

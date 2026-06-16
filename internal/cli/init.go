@@ -76,6 +76,20 @@ var errInvalidConfirmAnswer = errors.New("please answer yes or no")
 
 var errInitValueRequired = errors.New("value cannot be empty")
 
+// answerReader abstracts reading user input for testability.
+type answerReader interface {
+	ReadAnswer() (string, error)
+}
+
+// bufioAnswerReader wraps bufio.Reader to implement answerReader.
+type bufioAnswerReader struct {
+	reader *bufio.Reader
+}
+
+func (r *bufioAnswerReader) ReadAnswer() (string, error) {
+	return readAnswer(r.reader)
+}
+
 // InitSession represents one interactive run of ralph init.
 type InitSession struct {
 	OutputPath          string
@@ -316,13 +330,16 @@ func writeInitConfig(session *InitSession) error {
 
 	return nil
 }
-
 func confirmExistingConfigOverwrite(session *InitSession) (bool, error) {
-	answer, err := promptForAnswer(session, newConfirmQuestion(
+	return confirmExistingConfigOverwriteWithReader(session, &bufioAnswerReader{reader: session.Reader})
+}
+
+func confirmExistingConfigOverwriteWithReader(session *InitSession, reader answerReader) (bool, error) {
+	answer, err := promptForAnswerWithReader(session, newConfirmQuestion(
 		questionKeyOverwriteExisting,
 		"Overwrite existing configuration?",
 		confirmNo,
-	))
+	), reader)
 	if err != nil {
 		return false, err
 	}
@@ -333,15 +350,19 @@ func confirmExistingConfigOverwrite(session *InitSession) (bool, error) {
 }
 
 func confirmInitWrite(session *InitSession) (bool, error) {
+	return confirmInitWriteWithReader(session, &bufioAnswerReader{reader: session.Reader})
+}
+
+func confirmInitWriteWithReader(session *InitSession, reader answerReader) (bool, error) {
 	if err := printInitPreview(session); err != nil {
 		return false, err
 	}
 
-	answer, err := promptForAnswer(session, newConfirmQuestion(
+	answer, err := promptForAnswerWithReader(session, newConfirmQuestion(
 		questionKeyWriteConfiguration,
 		"Write configuration now?",
 		confirmYes,
-	))
+	), reader)
 	if err != nil {
 		return false, err
 	}
@@ -537,8 +558,12 @@ func askQuestions(session *InitSession, questions []InitQuestion) error {
 }
 
 func promptForAnswer(session *InitSession, question InitQuestion) (string, error) {
+	return promptForAnswerWithReader(session, question, &bufioAnswerReader{reader: session.Reader})
+}
+
+func promptForAnswerWithReader(session *InitSession, question InitQuestion, reader answerReader) (string, error) {
 	for {
-		answer, err := askSingleQuestion(session, question)
+		answer, err := askSingleQuestionWithReader(session, question, reader)
 		if err != nil {
 			return "", err
 		}
@@ -554,13 +579,16 @@ func promptForAnswer(session *InitSession, question InitQuestion) (string, error
 		return answer, nil
 	}
 }
-
 func askSingleQuestion(session *InitSession, question InitQuestion) (string, error) {
+	return askSingleQuestionWithReader(session, question, &bufioAnswerReader{reader: session.Reader})
+}
+
+func askSingleQuestionWithReader(session *InitSession, question InitQuestion, reader answerReader) (string, error) {
 	if err := printQuestion(session.Writer, question); err != nil {
 		return "", err
 	}
 
-	answer, err := readAnswer(session.Reader)
+	answer, err := reader.ReadAnswer()
 	if err != nil {
 		return "", normalizeAnswerReadError(err)
 	}
