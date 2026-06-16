@@ -370,6 +370,49 @@ func TestOpencodeExecuteStreamsOutputInRealTime(t *testing.T) {
 	testAgentExecutionStreamsOutputInRealTime(t, "opencode", a.Execute)
 }
 
+func TestOpencodeExecuteAndAvailability(t *testing.T) {
+	tmp := t.TempDir()
+	writeExecutable(t, tmp, "opencode", "#!/bin/sh\necho \"opencode:$*\"\n")
+	t.Setenv("PATH", tmp)
+
+	a := &agent.OpencodeAgent{Model: "m3", AgentMode: "agent-mode"}
+	if !a.IsAvailable() {
+		t.Fatal("expected opencode to be available")
+	}
+	if a.Name() != "opencode" {
+		t.Fatalf("unexpected name: %s", a.Name())
+	}
+
+	result, err := a.Execute("prompt", &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(result, "opencode:run --model m3 --agent agent-mode prompt") {
+		t.Fatalf("unexpected result: %q", result)
+	}
+
+	t.Setenv("PATH", t.TempDir())
+	if a.IsAvailable() {
+		t.Fatal("expected opencode to be unavailable")
+	}
+}
+
+func TestOpencodeExecuteWithoutOptionalFields(t *testing.T) {
+	tmp := t.TempDir()
+	writeExecutable(t, tmp, "opencode", "#!/bin/sh\necho \"opencode:$*\"\n")
+	t.Setenv("PATH", tmp)
+
+	a := &agent.OpencodeAgent{}
+
+	result, err := a.Execute("prompt", &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(result, "opencode:run prompt") {
+		t.Fatalf("expected minimal args, got %q", result)
+	}
+}
+
 func TestCursorExecuteStreamsOutputInRealTime(t *testing.T) {
 	a := &agent.CursorAgent{}
 	testAgentExecutionStreamsOutputInRealTime(t, "cursor", a.Execute)

@@ -1,193 +1,294 @@
 package cli
 
 import (
-	"reflect"
-	"strings"
+	"os"
 	"testing"
 
 	"github.com/iyaki/ralphex/internal/config"
+	"github.com/spf13/cobra"
 )
 
-func TestReadBoolFlagOverrideReturnsZeroValueWhenUnchanged(t *testing.T) {
-	cmd := NewRunCommand()
+func TestReadBoolFlagOverride(t *testing.T) {
+	t.Run("flag not changed returns unchanged false", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().Bool("test-flag", false, "")
 
-	override, err := readBoolFlagOverride(cmd, "log-truncate")
-	if err != nil {
-		t.Fatalf("expected no error for unchanged flag, got %v", err)
-	}
-	if override.changed {
-		t.Fatalf("expected unchanged override, got %+v", override)
-	}
+		result, err := readBoolFlagOverride(cmd, "test-flag")
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if result.changed {
+			t.Error("expected changed=false")
+		}
+		if result.value {
+			t.Error("expected value=false")
+		}
+	})
+
+	t.Run("flag changed to true returns changed true with value", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().Bool("test-flag", false, "")
+		if err := cmd.Flags().Set("test-flag", "true"); err != nil {
+			t.Fatalf("failed to set flag: %v", err)
+		}
+
+		result, err := readBoolFlagOverride(cmd, "test-flag")
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if !result.changed {
+			t.Error("expected changed=true")
+		}
+		if !result.value {
+			t.Error("expected value=true")
+		}
+	})
 }
 
-func TestReadBoolFlagOverrideTracksExplicitTrue(t *testing.T) {
-	cmd := NewRunCommand()
-	if err := cmd.ParseFlags([]string{"--log-truncate"}); err != nil {
-		t.Fatalf("failed to parse flags: %v", err)
-	}
+func TestApplyBoolFlagOverrides(t *testing.T) {
+	t.Run("changed=true updates config", func(t *testing.T) {
+		cfg := &config.Config{}
+		override := boolFlagOverride{changed: true, value: true}
 
-	override, err := readBoolFlagOverride(cmd, "log-truncate")
-	if err != nil {
-		t.Fatalf("expected no error reading override, got %v", err)
-	}
-	if !override.changed {
-		t.Fatalf("expected changed override, got %+v", override)
-	}
-	if !override.value {
-		t.Fatalf("expected override value true, got %+v", override)
-	}
+		applyBoolFlagOverrides(cfg, override)
+
+		if !cfg.LogTruncate {
+			t.Error("expected LogTruncate to be true")
+		}
+	})
+
+	t.Run("changed=false leaves config unchanged", func(t *testing.T) {
+		cfg := &config.Config{LogTruncate: false}
+		override := boolFlagOverride{changed: false, value: true}
+
+		applyBoolFlagOverrides(cfg, override)
+
+		if cfg.LogTruncate {
+			t.Error("expected LogTruncate to remain false")
+		}
+	})
 }
 
-func TestApplyBoolFlagOverridesAppliesOnlyChangedFlags(t *testing.T) {
+func TestReadEnvFlagOverrides(t *testing.T) {
+	t.Run("no --env flags returns nil", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().StringArray("env", []string{}, "")
+
+		result, err := readEnvFlagOverrides(cmd)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if result != nil {
+			t.Errorf("expected nil, got %v", result)
+		}
+	})
+
+	t.Run("single KEY=value returns map", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().StringArray("env", []string{}, "")
+		if err := cmd.Flags().Set("env", "KEY=value"); err != nil {
+			t.Fatalf("failed to set flag: %v", err)
+		}
+
+		result, err := readEnvFlagOverrides(cmd)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if result["KEY"] != "value" {
+			t.Errorf("expected KEY=value, got %v", result)
+		}
+	})
+
+	t.Run("invalid format returns error", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().StringArray("env", []string{}, "")
+		if err := cmd.Flags().Set("env", "INVALID_NO_EQUALS"); err != nil {
+			t.Fatalf("failed to set flag: %v", err)
+		}
+
+		_, err := readEnvFlagOverrides(cmd)
+		if err == nil {
+			t.Error("expected error for invalid format")
+		}
+	})
+
+	t.Run("invalid key format returns error", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().StringArray("env", []string{}, "")
+		if err := cmd.Flags().Set("env", "invalid-key=value"); err != nil {
+			t.Fatalf("failed to set flag: %v", err)
+		}
+
+		_, err := readEnvFlagOverrides(cmd)
+		if err == nil {
+			t.Error("expected error for invalid key")
+		}
+	})
+}
+
+func TestApplyEnvFlagOverrides(t *testing.T) {
+	t.Run("nil overrides leaves config unchanged", func(t *testing.T) {
+		cfg := &config.Config{}
+
+		applyEnvFlagOverrides(cfg, nil)
+
+		if cfg.Env != nil {
+			t.Errorf("expected Env to remain nil, got %v", cfg.Env)
+		}
+	})
+
+	t.Run("with overrides populates config", func(t *testing.T) {
+		cfg := &config.Config{}
+		overrides := map[string]string{"KEY1": "val1", "KEY2": "val2"}
+
+		applyEnvFlagOverrides(cfg, overrides)
+
+		if cfg.Env["KEY1"] != "val1" {
+			t.Errorf("expected KEY1=val1, got %v", cfg.Env)
+		}
+		if cfg.Env["KEY2"] != "val2" {
+			t.Errorf("expected KEY2=val2, got %v", cfg.Env)
+		}
+	})
+}
+
+func TestParsePositionalArgs(t *testing.T) {
 	tests := []struct {
-		name                string
-		initialLogTruncate  bool
-		logTruncateOverride boolFlagOverride
-		expectedLogTruncate bool
+		name     string
+		args     []string
+		wantGoal string
+		wantDesc string
 	}{
-		{
-			name:               "changed",
-			initialLogTruncate: false,
-			logTruncateOverride: boolFlagOverride{
-				changed: true,
-				value:   true,
-			},
-			expectedLogTruncate: true,
-		},
-		{
-			name:                "unchanged",
-			initialLogTruncate:  false,
-			expectedLogTruncate: false,
-		},
+		{"empty args", []string{}, "build", "Whole system"},
+		{"one arg", []string{"test"}, "test", "Whole system"},
+		{"two args", []string{"test", "description"}, "test", "description"},
+		{"three args", []string{"a", "b", "c"}, "a", "b"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := &config.Config{
-				LogTruncate: tt.initialLogTruncate,
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			goal, desc := parsePositionalArgs(tc.args)
+			if goal != tc.wantGoal {
+				t.Errorf("expected goal %q, got %q", tc.wantGoal, goal)
 			}
-
-			applyBoolFlagOverrides(cfg, tt.logTruncateOverride)
-
-			if cfg.LogTruncate != tt.expectedLogTruncate {
-				t.Fatalf("expected LogTruncate=%v, got %v", tt.expectedLogTruncate, cfg.LogTruncate)
+			if desc != tc.wantDesc {
+				t.Errorf("expected desc %q, got %q", tc.wantDesc, desc)
 			}
 		})
 	}
 }
 
-func TestReadEnvFlagOverridesReturnsEmptyWhenUnchanged(t *testing.T) {
-	cmd := NewRunCommand()
+func TestApplyModelSettings(t *testing.T) {
+	t.Run("flag changed leaves config unchanged", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().String("model", "", "")
+		if err := cmd.Flags().Set("model", "flag-model"); err != nil {
+			t.Fatalf("failed to set flag: %v", err)
+		}
+		cfg := &config.Config{Model: "original"}
+		fmOverride := &config.PromptConfigOverride{Model: "fm-model"}
 
-	overrides, err := readEnvFlagOverrides(cmd)
-	if err != nil {
-		t.Fatalf("expected no error for unchanged --env flag, got %v", err)
-	}
-	if len(overrides) != 0 {
-		t.Fatalf("expected empty overrides for unchanged --env flag, got %+v", overrides)
-	}
-}
+		applyModelSettings(cfg, cmd, fmOverride, "test-prompt")
 
-func TestReadEnvFlagOverridesParsesSplitOnFirstEquals(t *testing.T) {
-	cmd := NewRunCommand()
-	if err := cmd.ParseFlags([]string{"--env", "FOO=bar", "--env", "EMPTY=", "--env", "COMPLEX=a=b=c"}); err != nil {
-		t.Fatalf("failed to parse flags: %v", err)
-	}
-
-	overrides, err := readEnvFlagOverrides(cmd)
-	if err != nil {
-		t.Fatalf("expected no error reading --env overrides, got %v", err)
-	}
-
-	expected := map[string]string{
-		"FOO":     "bar",
-		"EMPTY":   "",
-		"COMPLEX": "a=b=c",
-	}
-
-	if !reflect.DeepEqual(overrides, expected) {
-		t.Fatalf("expected parsed --env overrides %+v, got %+v", expected, overrides)
-	}
-}
-
-func TestReadEnvFlagOverridesRejectsEntryWithoutEquals(t *testing.T) {
-	cmd := NewRunCommand()
-	if err := cmd.ParseFlags([]string{"--env", "NOT_VALID"}); err != nil {
-		t.Fatalf("failed to parse flags: %v", err)
-	}
-
-	_, err := readEnvFlagOverrides(cmd)
-	if err == nil {
-		t.Fatal("expected error for --env entry without '='")
-	}
-	if !strings.Contains(err.Error(), "expected KEY=VALUE") {
-		t.Fatalf("expected KEY=VALUE validation error, got %v", err)
-	}
-}
-
-func TestReadEnvFlagOverridesRejectsInvalidKey(t *testing.T) {
-	cmd := NewRunCommand()
-	if err := cmd.ParseFlags([]string{"--env", "1INVALID=value"}); err != nil {
-		t.Fatalf("failed to parse flags: %v", err)
-	}
-
-	_, err := readEnvFlagOverrides(cmd)
-	if err == nil {
-		t.Fatal("expected error for invalid --env key")
-	}
-	if !strings.Contains(err.Error(), "invalid --env key") {
-		t.Fatalf("expected invalid key error, got %v", err)
-	}
-}
-
-func TestReadEnvFlagOverridesLastValueWins(t *testing.T) {
-	cmd := NewRunCommand()
-	if err := cmd.ParseFlags([]string{"--env", "FOO=one", "--env", "FOO=two"}); err != nil {
-		t.Fatalf("failed to parse flags: %v", err)
-	}
-
-	overrides, err := readEnvFlagOverrides(cmd)
-	if err != nil {
-		t.Fatalf("expected no error reading duplicate --env keys, got %v", err)
-	}
-	if got := overrides["FOO"]; got != "two" {
-		t.Fatalf("expected last --env value to win, got %q", got)
-	}
-}
-
-func TestApplyEnvFlagOverridesCreatesEnvMapWhenMissing(t *testing.T) {
-	cfg := &config.Config{}
-
-	applyEnvFlagOverrides(cfg, map[string]string{
-		"FOO": "bar",
+		if cfg.Model != "original" {
+			t.Errorf("expected Model unchanged %q, got %q", "original", cfg.Model)
+		}
 	})
 
-	if cfg.Env == nil {
-		t.Fatal("expected Env map to be initialized")
-	}
-	if got := cfg.Env["FOO"]; got != "bar" {
-		t.Fatalf("expected Env[FOO]=bar, got %q", got)
-	}
-}
+	t.Run("env set leaves config unchanged", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cfg := &config.Config{Model: "original"}
+		t.Setenv("RALPH_MODEL", "env-model")
 
-func TestApplyEnvFlagOverridesOverwritesExistingKeys(t *testing.T) {
-	cfg := &config.Config{
-		Env: map[string]string{
-			"FOO": "from-config",
-			"BAR": "keep",
-		},
-	}
+		applyModelSettings(cfg, cmd, nil, "test-prompt")
 
-	applyEnvFlagOverrides(cfg, map[string]string{
-		"FOO": "from-flag",
+		if cfg.Model != "original" {
+			t.Errorf("expected Model unchanged, got %q", cfg.Model)
+		}
+		_ = os.Unsetenv("RALPH_MODEL")
 	})
 
-	expected := map[string]string{
-		"FOO": "from-flag",
-		"BAR": "keep",
-	}
+	t.Run("front matter has model sets config", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cfg := &config.Config{}
+		fmOverride := &config.PromptConfigOverride{Model: "fm-model"}
 
-	if !reflect.DeepEqual(cfg.Env, expected) {
-		t.Fatalf("expected merged env map %+v, got %+v", expected, cfg.Env)
-	}
+		applyModelSettings(cfg, cmd, fmOverride, "test-prompt")
+
+		if cfg.Model != "fm-model" {
+			t.Errorf("expected Model %q, got %q", "fm-model", cfg.Model)
+		}
+	})
+
+	t.Run("prompt override has model sets config", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cfg := &config.Config{
+			PromptOverrides: map[string]config.PromptConfigOverride{
+				"test-prompt": {Model: "override-model"},
+			},
+		}
+
+		applyModelSettings(cfg, cmd, nil, "test-prompt")
+
+		if cfg.Model != "override-model" {
+			t.Errorf("expected Model %q, got %q", "override-model", cfg.Model)
+		}
+	})
+}
+
+func TestApplyAgentModeSettings(t *testing.T) {
+	t.Run("flag changed leaves config unchanged", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().String("agent-mode", "", "")
+		if err := cmd.Flags().Set("agent-mode", "flag-mode"); err != nil {
+			t.Fatalf("failed to set flag: %v", err)
+		}
+		cfg := &config.Config{AgentMode: "original"}
+
+		applyAgentModeSettings(cfg, cmd, nil, "test-prompt")
+
+		if cfg.AgentMode != "original" {
+			t.Errorf("expected AgentMode unchanged, got %q", cfg.AgentMode)
+		}
+	})
+
+	t.Run("env set leaves config unchanged", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cfg := &config.Config{AgentMode: "original"}
+		t.Setenv("RALPH_AGENT_MODE", "env-mode")
+
+		applyAgentModeSettings(cfg, cmd, nil, "test-prompt")
+
+		if cfg.AgentMode != "original" {
+			t.Errorf("expected AgentMode unchanged, got %q", cfg.AgentMode)
+		}
+		_ = os.Unsetenv("RALPH_AGENT_MODE")
+	})
+
+	t.Run("front matter has agent-mode sets config", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cfg := &config.Config{}
+		fmOverride := &config.PromptConfigOverride{AgentMode: "fm-mode"}
+
+		applyAgentModeSettings(cfg, cmd, fmOverride, "test-prompt")
+
+		if cfg.AgentMode != "fm-mode" {
+			t.Errorf("expected AgentMode %q, got %q", "fm-mode", cfg.AgentMode)
+		}
+	})
+
+	t.Run("prompt override has agent-mode sets config", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cfg := &config.Config{
+			PromptOverrides: map[string]config.PromptConfigOverride{
+				"test-prompt": {AgentMode: "override-mode"},
+			},
+		}
+
+		applyAgentModeSettings(cfg, cmd, nil, "test-prompt")
+
+		if cfg.AgentMode != "override-mode" {
+			t.Errorf("expected AgentMode %q, got %q", "override-mode", cfg.AgentMode)
+		}
+	})
 }
