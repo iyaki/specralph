@@ -90,6 +90,51 @@ func (r *bufioAnswerReader) ReadAnswer() (string, error) {
 	return readAnswer(r.reader)
 }
 
+// questionnaireRunner abstracts the questionnaire flow for testability.
+type questionnaireRunner interface {
+	AskQuestions(session *InitSession, questions []InitQuestion) error
+}
+
+// standardQuestionnaireRunner implements questionnaireRunner for production.
+type standardQuestionnaireRunner struct{}
+
+func (r *standardQuestionnaireRunner) AskQuestions(session *InitSession, questions []InitQuestion) error {
+	return askQuestions(session, questions)
+}
+
+func runInitQuestionnaireWithRunner(session *InitSession, runner questionnaireRunner) error {
+	session.Questions = baseInitQuestions(session.Answers)
+	if err := runner.AskQuestions(session, session.Questions); err != nil {
+		return err
+	}
+
+	if session.Answers.LogFile != "" {
+		loggingQuestions := loggingInitQuestions(session.Answers)
+		session.Questions = append(session.Questions, loggingQuestions...)
+
+		if err := runner.AskQuestions(session, loggingQuestions); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func askQuestionsWithReader(session *InitSession, questions []InitQuestion, reader answerReader) error {
+	for _, question := range questions {
+		answer, err := promptForAnswerWithReader(session, question, reader)
+		if err != nil {
+			return err
+		}
+
+		if err := applyInitAnswer(session.Answers, question.Key, answer); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // InitSession represents one interactive run of ralph init.
 type InitSession struct {
 	OutputPath          string

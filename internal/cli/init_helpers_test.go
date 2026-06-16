@@ -716,3 +716,139 @@ func TestAskSingleQuestionWithReader(t *testing.T) {
 		}
 	})
 }
+
+// mockErrorReader always returns an error.
+type mockErrorReader struct{}
+
+func (m *mockErrorReader) ReadAnswer() (string, error) {
+	return "", io.EOF
+}
+
+func TestConfirmExistingConfigOverwriteWithReaderError(t *testing.T) {
+	session := &InitSession{
+		Writer: &bytes.Buffer{},
+	}
+	reader := &mockErrorReader{}
+
+	confirmed, err := confirmExistingConfigOverwriteWithReader(session, reader)
+	if err == nil {
+		t.Error("expected error from reader")
+	}
+	if confirmed {
+		t.Error("expected confirmed=false on error")
+	}
+}
+
+func TestConfirmInitWriteWithReaderError(t *testing.T) {
+	session := &InitSession{
+		Writer:  &bytes.Buffer{},
+		Answers: &InitAnswers{AgentName: "opencode"},
+	}
+	reader := &mockErrorReader{}
+
+	confirmed, err := confirmInitWriteWithReader(session, reader)
+	if err == nil {
+		t.Error("expected error from reader")
+	}
+	if confirmed {
+		t.Error("expected confirmed=false on error")
+	}
+}
+
+func TestAskQuestionsWithReaderError(t *testing.T) {
+	session := &InitSession{
+		Writer:  &bytes.Buffer{},
+		Answers: &InitAnswers{},
+	}
+	questions := []InitQuestion{
+		{Key: "agent", Prompt: "Agent?", Type: "input"},
+	}
+	reader := &mockErrorReader{}
+
+	err := askQuestionsWithReader(session, questions, reader)
+	if err == nil {
+		t.Error("expected error from reader")
+	}
+}
+
+func TestRunInitQuestionnaireWithRunnerError(t *testing.T) {
+	session := &InitSession{
+		Answers: &InitAnswers{LogFile: ""},
+	}
+	runner := &mockErrorQuestionnaireRunner{err: io.EOF}
+
+	err := runInitQuestionnaireWithRunner(session, runner)
+	if err == nil {
+		t.Error("expected error from runner")
+	}
+}
+
+type mockErrorQuestionnaireRunner struct {
+	err error
+}
+
+func (m *mockErrorQuestionnaireRunner) AskQuestions(_ *InitSession, _ []InitQuestion) error {
+	return m.err
+}
+
+func TestAskQuestionsWithReaderSuccess(t *testing.T) {
+	session := &InitSession{
+		Writer:  &bytes.Buffer{},
+		Answers: &InitAnswers{},
+	}
+	questions := []InitQuestion{
+		{Key: "agent", Prompt: "Agent?", Type: "input", DefaultValue: "opencode"},
+		{Key: "model", Prompt: "Model?", Type: "input"},
+	}
+	reader := &mockAnswerReader{answers: []string{"claude", "gpt-4"}}
+
+	err := askQuestionsWithReader(session, questions, reader)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if session.Answers.AgentName != "claude" {
+		t.Errorf("expected AgentName \"claude\", got %q", session.Answers.AgentName)
+	}
+	if session.Answers.Model != "gpt-4" {
+		t.Errorf("expected Model \"gpt-4\", got %q", session.Answers.Model)
+	}
+}
+
+type successQuestionnaireRunner struct{}
+
+func (r *successQuestionnaireRunner) AskQuestions(_ *InitSession, _ []InitQuestion) error {
+	return nil
+}
+
+func TestRunInitQuestionnaireWithRunnerSuccess(t *testing.T) {
+	t.Run("without logging questions", func(t *testing.T) {
+		session := &InitSession{
+			Answers: &InitAnswers{LogFile: ""},
+		}
+		runner := &successQuestionnaireRunner{}
+
+		err := runInitQuestionnaireWithRunner(session, runner)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(session.Questions) == 0 {
+			t.Error("expected questions to be populated")
+		}
+	})
+
+	t.Run("with logging questions", func(t *testing.T) {
+		session := &InitSession{
+			Answers: &InitAnswers{LogFile: "/test.log"},
+		}
+		runner := &successQuestionnaireRunner{}
+
+		err := runInitQuestionnaireWithRunner(session, runner)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Should have base questions + 1 logging question
+		if len(session.Questions) < 10 {
+			t.Errorf("expected at least 10 questions, got %d", len(session.Questions))
+		}
+	})
+}
