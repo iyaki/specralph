@@ -410,3 +410,14 @@ func cloneStringMap(source map[string]string) map[string]string {
 
 	return cloned
 }
+
+
+// LoadDefaultConfigForTest exports loadDefaultConfig for testing.
+func LoadDefaultConfigForTest(c, target *Config) (string, error) {
+	return loadDefaultConfig(c, target)
+}
+
+// ValidateConfigFileKeysForTest exports validateConfigFileKeys for testing.
+func ValidateConfigFileKeysForTest(meta toml.MetaData, path string) error {
+	return validateConfigFileKeys(meta, path)
+}
