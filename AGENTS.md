@@ -15,7 +15,7 @@
 - Local suite: `make quality`.
 - Targeted runs:
   - `make lint|test|test-e2e|test-race|coverage|mutation|security|arch`.
-- Coverage gate: min 90%.
+- Coverage gate: min 95%.
 - Run the full Go test suite with `make test` (includes `test/e2e`).
 - Run only the end-to-end tests with `make test-e2e`.
 - Execute mutation testing with `make mutation` ONLY in final stages of the task development. **NEVER** execute mutation testing during the Test Driven Development process.

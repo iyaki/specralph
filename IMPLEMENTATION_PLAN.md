@@ -408,7 +408,7 @@
 
 **Checklist:**
 - [x] `make quality` composes lint, tests, race, coverage, mutation, security, and architecture checks.
-- [x] Coverage gate remains set to >= 90%.
+- [x] Coverage gate remains set to >= 95%.
 - [x] `make test` includes full Go suite including `test/e2e`.
 
 #### 8.2 CI quality/security workflows

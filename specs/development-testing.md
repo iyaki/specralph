@@ -62,7 +62,7 @@ internal/
 
 1. Build uses `go build` to produce the `ralph` binary.
 2. Tests run with `go test` across all packages.
-3. Coverage gate enforces >= 90% using `go tool cover`.
+3. Coverage gate enforces >= 95% using `go tool cover`.
 
 ## Data model
 
@@ -77,7 +77,7 @@ internal/
  
 - E2ESuite
   - Scope: `./test/e2e` only.
-  - Coverage threshold: 90% minimum.
+  - Coverage threshold: 95% minimum.
 
 ### Relationships
 
@@ -113,7 +113,7 @@ internal/
 
 1. Run `make test-coverage`.
 2. Uses a temporary coverprofile with `-covermode=atomic`.
-3. Fails if total coverage is below 90%.
+3. Fails if total coverage is below 95%.
 
 ### Local run
 
@@ -151,7 +151,7 @@ internal/
 - `make build` produces `bin/ralph`.
 - `make test` completes successfully and covers the full Go suite.
 - `make test-e2e` executes only the e2e suite successfully.
-- `make coverage` (or `make test-coverage`) fails when coverage is below 90%.
+- `make coverage` (or `make test-coverage`) fails when coverage is below 95%.
 - `DEBUG=1 ./bin/ralph plan` exits after one iteration.
 
 ## Appendices

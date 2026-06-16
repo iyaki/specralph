@@ -112,7 +112,7 @@ make quality
 
 Notes:
 
-- Coverage minimum is 90%.
+- Coverage minimum is 95%.
 - `make test` runs the full Go suite, including `test/e2e`; use `make test-e2e` to run only the end-to-end package.
 - `make quality` includes mutation testing (`make mutation`), which can be slow. Use it in final validation stages.
 

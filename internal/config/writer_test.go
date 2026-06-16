@@ -3,6 +3,7 @@ package config_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/BurntSushi/toml"
@@ -141,5 +142,35 @@ func TestWriteConfig_Atomic(t *testing.T) {
 
 	if loadedCfg.MaxIterations != 10 {
 		t.Errorf("Expected MaxIterations 10, got %d", loadedCfg.MaxIterations)
+	}
+}
+
+func TestWriteConfig_SuccessAndVerify(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "test.toml")
+	cfg := &config.Config{
+		AgentName:     "claude",
+		Model:         "sonnet",
+		MaxIterations: 75,
+		LogTruncate:   true,
+	}
+
+	err := config.WriteConfig(path, cfg)
+	if err != nil {
+		t.Fatalf("WriteConfig failed: %v", err)
+	}
+
+	// Read back and verify
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+
+	contentStr := string(content)
+	if !strings.Contains(contentStr, "claude") {
+		t.Error("expected agent in output")
+	}
+	if !strings.Contains(contentStr, "max-iterations = 75") {
+		t.Error("expected max-iterations in output")
 	}
 }

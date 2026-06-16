@@ -61,10 +61,10 @@ test-coverage:
 	@cover_status=0; \
 	$(GO) test -coverprofile="$(COVERAGE_OUT)" -covermode=atomic ./... || cover_status=$$?; \
 	total="$$($(GO) tool cover -func="$(COVERAGE_OUT)" | awk '/^total:/{gsub(/%/,"",$$3); print $$3}')"; \
-	if awk -v total="$$total" -v minimum="90" 'BEGIN {exit !(total >= minimum)}'; then \
+	if awk -v total="$$total" -v minimum="95" 'BEGIN {exit !(total >= minimum)}'; then \
 		exit $$cover_status; \
 	else \
-		echo "Coverage $${total}% is below required 90%." >&2; \
+		echo "Coverage $${total}% is below required 95%." >&2; \
 		exit 1; \
 	fi
 
