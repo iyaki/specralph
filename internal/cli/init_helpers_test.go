@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"io"
 	"os"
@@ -851,4 +852,90 @@ func TestRunInitQuestionnaireWithRunnerSuccess(t *testing.T) {
 			t.Errorf("expected at least 10 questions, got %d", len(session.Questions))
 		}
 	})
+}
+
+// TestRunInitQuestionnaire_LoggingQuestions tests the logging questions branch.
+func TestRunInitQuestionnaire_LoggingQuestions(t *testing.T) {
+	session := &InitSession{Answers: &InitAnswers{LogFile: "/test.log"}}
+	runner := &mockSuccessRunner{}
+	if err := runInitQuestionnaireWithRunner(session, runner); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should have base questions + logging questions
+	if len(session.Questions) < 10 {
+		t.Errorf("expected at least 10 questions with logging, got %d", len(session.Questions))
+	}
+}
+
+type mockSuccessRunner struct{}
+
+func (m *mockSuccessRunner) AskQuestions(_ *InitSession, _ []InitQuestion) error { return nil }
+
+// TestAskSingleQuestionWithReader_DefaultValue tests empty answer returns default.
+func TestAskSingleQuestionWithReader_DefaultValue(t *testing.T) {
+	session := &InitSession{
+		Writer: &bytes.Buffer{},
+		Reader: bufio.NewReader(strings.NewReader("\n")),
+	}
+	question := InitQuestion{DefaultValue: "default-value"}
+
+	answer, err := askSingleQuestionWithReader(session, question, &bufioAnswerReader{reader: session.Reader})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if answer != "default-value" {
+		t.Errorf("expected \"default-value\", got %q", answer)
+	}
+}
+
+// TestReadAnswer_EOFWithContent tests EOF after reading content.
+func TestReadAnswer_EOFWithContent(t *testing.T) {
+	reader := bufio.NewReader(strings.NewReader("content-without-newline"))
+	answer, err := readAnswer(reader)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if answer != "content-without-newline" {
+		t.Errorf("expected \"content-without-newline\", got %q", answer)
+	}
+}
+
+// TestReadAnswer_ImmediateEOF tests immediate EOF.
+func TestReadAnswer_ImmediateEOF(t *testing.T) {
+	reader := bufio.NewReader(strings.NewReader(""))
+	_, err := readAnswer(reader)
+	if err != io.EOF {
+		t.Errorf("expected EOF error, got %v", err)
+	}
+}
+
+// TestPrintInitPreview_FullSuccess tests successful preview generation.
+func TestPrintInitPreview_FullSuccess(t *testing.T) {
+	session := &InitSession{
+		Writer: &bytes.Buffer{},
+		Answers: &InitAnswers{
+			AgentName:     "opencode",
+			Model:         "gpt-4",
+			AgentMode:     "agent",
+			MaxIterations: 25,
+			LogFile:       "/tmp/test.log",
+			LogTruncate:   true,
+		},
+	}
+
+	err := printInitPreview(session)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := session.Writer.(*bytes.Buffer).String()
+	if !strings.Contains(output, "Configuration preview:") {
+		t.Error("missing header")
+	}
+	if !strings.Contains(output, "agent: opencode") {
+		t.Error("missing agent")
+	}
+	if !strings.Contains(output, "logging: enabled") {
+		t.Error("missing logging enabled")
+	}
 }

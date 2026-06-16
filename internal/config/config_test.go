@@ -1,6 +1,5 @@
 package config_test
 
-
 import (
 	"github.com/BurntSushi/toml"
 	"os"
@@ -546,7 +545,7 @@ func TestValidateConfigFileKeys(t *testing.T) {
 		if err != nil {
 			t.Logf("got error (acceptable): %v", err)
 		}
-		
+
 		// Test validate directly
 		meta := toml.MetaData{}
 		err = config.ValidateConfigFileKeysForTest(meta, badConfig)
@@ -554,4 +553,32 @@ func TestValidateConfigFileKeys(t *testing.T) {
 			t.Logf("got expected validation error: %v", err)
 		}
 	})
+}
+
+func TestLoadDefaultConfig_WithInvalidTOML(t *testing.T) {
+	tmpDir := t.TempDir()
+	badFile := filepath.Join(tmpDir, "ralph.toml")
+	if err := os.WriteFile(badFile, []byte("invalid [[[ toml"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	orig, _ := os.Getwd()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.Chdir(orig); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	c := &config.Config{}
+	target := &config.Config{}
+	_, err := config.LoadDefaultConfigForTest(c, target)
+	if err == nil {
+		t.Fatal("expected error for invalid TOML")
+	}
+	if !strings.Contains(err.Error(), "failed to decode") {
+		t.Logf("got error: %v", err)
+	}
 }

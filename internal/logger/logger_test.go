@@ -116,7 +116,7 @@ func TestNewLoggerErrorPaths(t *testing.T) {
 		}
 		// Use a path where directory creation will fail
 		cfg := &config.Config{LogFile: "/proc/nonexistent/invalid.log"}
-		
+
 		_, err := logger.NewLogger(cfg)
 		if err == nil {
 			t.Fatal("expected error for unwritable path")
@@ -125,7 +125,7 @@ func TestNewLoggerErrorPaths(t *testing.T) {
 			t.Errorf("expected directory creation error, got: %v", err)
 		}
 	})
-	
+
 	t.Run("log file open fails", func(t *testing.T) {
 		if os.Geteuid() == 0 {
 			t.Skip("skipping when running as root")
@@ -136,11 +136,13 @@ func TestNewLoggerErrorPaths(t *testing.T) {
 		if err := os.Mkdir(badDir, 0000); err != nil {
 			t.Fatalf("failed to create dir: %v", err)
 		}
-		if err := os.Chmod(badDir, 0000); err != nil { t.Skipf("failed to set permissions: %v", err) }
+		if err := os.Chmod(badDir, 0000); err != nil {
+			t.Skipf("failed to set permissions: %v", err)
+		}
 		logPath := filepath.Join(badDir, "test.log")
-		
+
 		cfg := &config.Config{LogFile: logPath}
-		
+
 		_, err := logger.NewLogger(cfg)
 		if err == nil {
 			t.Fatal("expected error for unwritable file")

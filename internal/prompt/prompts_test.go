@@ -251,4 +251,3 @@ func TestGetPromptNoFrontMatter(t *testing.T) {
 		t.Errorf("expected empty overrides, got %v", override)
 	}
 }
-

@@ -411,7 +411,6 @@ func cloneStringMap(source map[string]string) map[string]string {
 	return cloned
 }
 
-
 // LoadDefaultConfigForTest exports loadDefaultConfig for testing.
 func LoadDefaultConfigForTest(c, target *Config) (string, error) {
 	return loadDefaultConfig(c, target)
