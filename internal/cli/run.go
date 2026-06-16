@@ -40,10 +40,6 @@ func NewRunCommand() *cobra.Command {
 func runCommandLogic(cmd *cobra.Command, args []string, cfg *config.Config) error {
 	promptName, scope := parsePositionalArgs(args)
 
-	noLogOverride, err := readBoolFlagOverride(cmd, "no-log")
-	if err != nil {
-		return err
-	}
 
 	logTruncateOverride, err := readBoolFlagOverride(cmd, "log-truncate")
 	if err != nil {
@@ -59,7 +55,7 @@ func runCommandLogic(cmd *cobra.Command, args []string, cfg *config.Config) erro
 	if err := cfg.LoadConfig(); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	applyBoolFlagOverrides(cfg, noLogOverride, logTruncateOverride)
+	applyBoolFlagOverrides(cfg, logTruncateOverride)
 	applyEnvFlagOverrides(cfg, envFlagOverrides)
 
 	// Initialize logger
@@ -109,11 +105,7 @@ func readBoolFlagOverride(cmd *cobra.Command, flagName string) (boolFlagOverride
 	return boolFlagOverride{changed: true, value: value}, nil
 }
 
-func applyBoolFlagOverrides(cfg *config.Config, noLogOverride, logTruncateOverride boolFlagOverride) {
-	if noLogOverride.changed {
-		cfg.NoLog = noLogOverride.value
-	}
-
+func applyBoolFlagOverrides(cfg *config.Config, logTruncateOverride boolFlagOverride) {
 	if logTruncateOverride.changed {
 		cfg.LogTruncate = logTruncateOverride.value
 	}
@@ -317,7 +309,6 @@ func setupSharedFlags(cmd *cobra.Command, cfg *config.Config) {
 	flags.BoolVar(&cfg.NoSpecsIndex, "no-specs-index", false, "Disable specs index file")
 	flags.StringVarP(&cfg.ImplementationPlanName, "implementation-plan-name", "n", "", "Implementation plan file name")
 	flags.StringVarP(&cfg.LogFile, "log-file", "l", "", "Log file path")
-	flags.BoolVar(&cfg.NoLog, "no-log", false, "Disable logs")
 	flags.BoolVar(&cfg.LogTruncate, "log-truncate", false, "Truncate log file before writing")
 	flags.StringVar(&cfg.CustomPrompt, "prompt", "", "Inline custom prompt (overrides prompt files)")
 	flags.StringVarP(&cfg.AgentName, "agent", "a", "", "AI agent to use: omp, opencode, claude, cursor"+

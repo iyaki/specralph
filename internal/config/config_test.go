@@ -78,32 +78,14 @@ func assertDefaultCoreFields(t *testing.T, c *config.Config, home string) {
 func assertDefaultLoggingFields(t *testing.T, c *config.Config) {
 	t.Helper()
 
-	if !c.NoLog {
-		t.Fatalf("expected default NoLog=true, got %v", c.NoLog)
+	if c.LogFile != "" {
+		t.Fatalf("expected default LogFile=\"\", got %q", c.LogFile)
 	}
 	if c.LogTruncate {
 		t.Fatalf("expected default LogTruncate=false, got %v", c.LogTruncate)
 	}
 }
 
-func TestLoadConfigLogEnabledEnvCanEnableLogging(t *testing.T) {
-	dir := t.TempDir()
-	configFile := filepath.Join(dir, "ralph.toml")
-	if err := os.WriteFile(configFile, []byte("no-log = true\n"), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	t.Setenv("RALPH_LOG_ENABLED", "1")
-
-	c := &config.Config{ConfigFile: configFile}
-	if err := c.LoadConfig(); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if c.NoLog {
-		t.Fatalf("expected env RALPH_LOG_ENABLED=1 to enable logging, got NoLog=%v", c.NoLog)
-	}
-}
 
 func TestLoadConfigPrecedence(t *testing.T) {
 	dir := t.TempDir()
@@ -356,8 +338,11 @@ func assertPromptEnvFields(t *testing.T, c *config.Config) {
 
 func assertLogEnvFields(t *testing.T, c *config.Config) {
 	t.Helper()
-	if !c.NoLog || !c.LogTruncate {
-		t.Fatalf("expected log flags from env, got NoLog=%v LogTruncate=%v", c.NoLog, c.LogTruncate)
+	if c.LogFile == "" {
+		t.Fatalf("expected LogFile from env, got empty")
+	}
+	if !c.LogTruncate {
+		t.Fatalf("expected LogTruncate=true from env RALPH_LOG_APPEND=0, got %v", c.LogTruncate)
 	}
 }
 

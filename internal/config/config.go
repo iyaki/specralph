@@ -25,7 +25,6 @@ type envValues struct {
 	implementationPlanName string
 	customPrompt           string
 	logFile                string
-	logEnabled             string
 	logAppend              string
 	promptsDir             string
 	agentName              string
@@ -34,7 +33,6 @@ type envValues struct {
 }
 
 const (
-	defaultNoLog       = true
 	defaultLogTruncate = false
 )
 
@@ -48,7 +46,6 @@ type Config struct {
 	NoSpecsIndex           bool                            `toml:"no-specs-index"`
 	ImplementationPlanName string                          `toml:"implementation-plan-name"`
 	LogFile                string                          `toml:"log-file"`
-	NoLog                  bool                            `toml:"no-log"`
 	LogTruncate            bool                            `toml:"log-truncate"`
 	CustomPrompt           string                          `toml:"custom-prompt"`
 	PromptsDir             string                          `toml:"prompts-dir"`
@@ -111,7 +108,6 @@ func (c *Config) applyLocalOverlay(configFromFile *Config, configPath string) er
 
 func (c *Config) resolveFileConfig() (*Config, string, error) {
 	configFromFile := &Config{
-		NoLog:       defaultNoLog,
 		LogTruncate: defaultLogTruncate,
 	}
 
@@ -190,7 +186,6 @@ func readEnv() envValues {
 		implementationPlanName: os.Getenv("RALPH_IMPLEMENTATION_PLAN_NAME"),
 		customPrompt:           os.Getenv("RALPH_CUSTOM_PROMPT"),
 		logFile:                os.Getenv("RALPH_LOG_FILE"),
-		logEnabled:             os.Getenv("RALPH_LOG_ENABLED"),
 		logAppend:              os.Getenv("RALPH_LOG_APPEND"),
 		promptsDir:             os.Getenv("RALPH_PROMPTS_DIR"),
 		agentName:              os.Getenv("RALPH_AGENT"),
@@ -214,7 +209,6 @@ func (c *Config) applyConfigValues(fileCfg *Config, env envValues) {
 	c.CustomPrompt = resolveString(c.CustomPrompt, env.customPrompt, fileCfg.CustomPrompt, "")
 	c.PromptsDir = resolveString(c.PromptsDir, env.promptsDir, fileCfg.PromptsDir, defaultPromptsDir())
 	c.LogFile = resolveString(c.LogFile, env.logFile, fileCfg.LogFile, defaultLogFile())
-	c.NoLog = resolveNoLog(c.NoLog, env.logEnabled, fileCfg.NoLog)
 	c.LogTruncate = resolveLogTruncate(c.LogTruncate, env.logAppend, fileCfg.LogTruncate)
 	c.AgentName = resolveString(c.AgentName, env.agentName, fileCfg.AgentName, defaultAgentName)
 	c.Model = resolveString(c.Model, env.model, fileCfg.Model, "")
@@ -269,20 +263,6 @@ func resolveBool(flagValue bool, fileValue bool) bool {
 	return fileValue
 }
 
-func resolveNoLog(flagValue bool, envValue string, fileValue bool) bool {
-	if flagValue {
-		return true
-	}
-
-	if envValue != "" {
-		if parsed, err := strconv.ParseBool(envValue); err == nil {
-			return !parsed
-		}
-	}
-
-	return fileValue
-}
-
 func resolveLogTruncate(flagValue bool, envValue string, fileValue bool) bool {
 	if flagValue {
 		return true
@@ -302,9 +282,7 @@ func defaultPromptsDir() string {
 }
 
 func defaultLogFile() string {
-	cwd, _ := os.Getwd()
-
-	return filepath.Join(cwd, "ralph.log")
+	return ""
 }
 
 // loadConfigFile reads a TOML config file and populates the given Config.
@@ -324,9 +302,6 @@ func mergeScalars(base *Config, overlay *Config, meta toml.MetaData) {
 	}
 	if meta.IsDefined("no-specs-index") {
 		base.NoSpecsIndex = overlay.NoSpecsIndex
-	}
-	if meta.IsDefined("no-log") {
-		base.NoLog = overlay.NoLog
 	}
 	if meta.IsDefined("log-truncate") {
 		base.LogTruncate = overlay.LogTruncate

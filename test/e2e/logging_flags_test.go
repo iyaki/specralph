@@ -13,11 +13,9 @@ func TestE2ELoggingFlags(t *testing.T) {
 		tc   TestCase
 	}{
 		{name: "DefaultNoLog", tc: loggingDefaultNoLogCase()},
-		{name: "EnabledViaEnv", tc: loggingEnabledViaEnvCase()},
+		{name: "EnabledViaFlag", tc: loggingEnabledViaFlagCase()},
 		{name: "EnabledViaConfig", tc: loggingEnabledViaConfigCase()},
-		{name: "NoLogFalseOverridesConfig", tc: loggingNoLogFalseOverridesConfigCase()},
-		{name: "NoLogFalseOverridesEnv", tc: loggingNoLogFalseOverridesEnvCase()},
-		{name: "NoLog", tc: loggingNoLogFlagCase()},
+		{name: "FlagOverridesConfig", tc: loggingFlagOverridesConfigCase()},
 		{name: "LogTruncate", tc: loggingTruncateCase()},
 	}
 
@@ -43,13 +41,12 @@ func loggingDefaultNoLogCase() TestCase {
 	}
 }
 
-func loggingEnabledViaEnvCase() TestCase {
+func loggingEnabledViaFlagCase() TestCase {
 	return TestCase{
-		Name: "Logging: Enabled via RALPH_LOG_ENABLED=1",
-		Args: []string{"--prompt-file", "prompt.txt"},
+		Name: "Logging: Enabled via --log-file flag",
+		Args: []string{"--log-file", "ralph.log", "--prompt-file", "prompt.txt"},
 		Env: map[string]string{
 			"RALPH_TEST_AGENT_MODE": "complete_once",
-			"RALPH_LOG_ENABLED":     "1",
 		},
 		Files: map[string]string{
 			"prompt.txt": "Just a simple prompt",
@@ -61,7 +58,7 @@ func loggingEnabledViaEnvCase() TestCase {
 
 func loggingEnabledViaConfigCase() TestCase {
 	return TestCase{
-		Name: "Logging: Enabled via config no-log=false",
+		Name: "Logging: Enabled via config log-file",
 		Args: []string{
 			"--config", "ralph.toml",
 			"--prompt-file", "prompt.txt",
@@ -71,76 +68,40 @@ func loggingEnabledViaConfigCase() TestCase {
 		},
 		Files: map[string]string{
 			"prompt.txt": "Just a simple prompt",
-			"ralph.toml": "no-log = false\n",
+			"ralph.toml": `log-file = "ralph.log"
+`,
 		},
 		ExpectedExitCode: 0,
 		ExpectedFiles:    []string{"ralph.log"},
 	}
 }
 
-func loggingNoLogFalseOverridesConfigCase() TestCase {
+func loggingFlagOverridesConfigCase() TestCase {
 	return TestCase{
-		Name: "Logging: --no-log=false overrides config",
+		Name: "Logging: --log-file overrides missing config log-file",
 		Args: []string{
 			"--config", "ralph.toml",
 			"--prompt-file", "prompt.txt",
 			"--log-file", "ralph.log",
-			"--no-log=false",
 		},
 		Env: map[string]string{
 			"RALPH_TEST_AGENT_MODE": "complete_once",
 		},
 		Files: map[string]string{
 			"prompt.txt": "Just a simple prompt",
-			"ralph.toml": "no-log = true\n",
+			"ralph.toml": "# no log-file set\n",
 		},
 		ExpectedExitCode: 0,
 		ExpectedFiles:    []string{"ralph.log"},
-	}
-}
-
-func loggingNoLogFalseOverridesEnvCase() TestCase {
-	return TestCase{
-		Name: "Logging: --no-log=false overrides env",
-		Args: []string{
-			"--prompt-file", "prompt.txt",
-			"--log-file", "ralph.log",
-			"--no-log=false",
-		},
-		Env: map[string]string{
-			"RALPH_TEST_AGENT_MODE": "complete_once",
-			"RALPH_LOG_ENABLED":     "0",
-		},
-		Files: map[string]string{
-			"prompt.txt": "Just a simple prompt",
-		},
-		ExpectedExitCode: 0,
-		ExpectedFiles:    []string{"ralph.log"},
-	}
-}
-
-func loggingNoLogFlagCase() TestCase {
-	return TestCase{
-		Name: "Logging: Disabled via --no-log",
-		Args: []string{"--log-file", "ralph.log", "--no-log", "--prompt-file", "prompt.txt"},
-		Env: map[string]string{
-			"RALPH_TEST_AGENT_MODE": "complete_once",
-		},
-		Files: map[string]string{
-			"prompt.txt": "Just a simple prompt",
-		},
-		ExpectedExitCode: 0,
-		ForbiddenFiles:   []string{"ralph.log"},
 	}
 }
 
 func loggingTruncateCase() TestCase {
 	return TestCase{
-		Name: "Logging: Truncate",
+		Name: "Logging: Truncate with --log-truncate",
 		Args: []string{"--log-file", "ralph.log", "--log-truncate", "--prompt-file", "prompt.txt"},
 		Env: map[string]string{
 			"RALPH_TEST_AGENT_MODE": "complete_once",
-			"RALPH_LOG_ENABLED":     "1",
 		},
 		Files: map[string]string{
 			"prompt.txt": "Just a simple prompt",
@@ -163,7 +124,6 @@ func TestE2ELoggingPermissions(t *testing.T) {
 		Args: []string{"--log-file", "ralph.log", "--prompt-file", "prompt.txt"},
 		Env: map[string]string{
 			"RALPH_TEST_AGENT_MODE": "complete_once",
-			"RALPH_LOG_ENABLED":     "1",
 		},
 		Files: map[string]string{
 			"prompt.txt": "Just a simple prompt",
@@ -192,7 +152,6 @@ func TestE2ELoggingStdoutParity(t *testing.T) {
 		Args: []string{"--log-file", "ralph.log", "--prompt-file", "prompt.txt"},
 		Env: map[string]string{
 			"RALPH_TEST_AGENT_MODE": "complete_once",
-			"RALPH_LOG_ENABLED":     "1",
 		},
 		Files: map[string]string{
 			"prompt.txt": "Just a simple prompt",

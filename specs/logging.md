@@ -52,9 +52,10 @@ internal/
 ### Data flow summary
 
 1. CLI initializes a logger after configuration is loaded.
-2. Logging is disabled by default. If logging is enabled, the logger opens/creates a log file.
-3. A run header and git metadata are written at startup.
-4. CLI writes output to stdout and the log file via a multi-writer.
+2. Logging is enabled only when a log file path is specified (via `--log-file`, `log-file` config, or `RALPH_LOG_FILE` env).
+3. If enabled, the logger opens/creates the log file.
+4. A run header and git metadata are written at startup.
+5. CLI writes output to stdout and the log file via a multi-writer.
 
 ## Data model
 
@@ -70,32 +71,25 @@ internal/
 
 ### Relationships
 
-- Logger behavior depends on configuration fields `NoLog`, `LogFile`, and `LogTruncate`.
-- Environment variables can disable logging or force truncation.
-
-### Persistence Notes
-
-- Log output is stored as plain text on disk.
-
+- Logger behavior depends on configuration field `LogFile` and `LogTruncate`.
+- Environment variable `RALPH_LOG_FILE` can set the log path; `RALPH_LOG_APPEND=0` forces truncation.
 | Store | Format     | Location                   | Notes                                                      |
 | ----- | ---------- | -------------------------- | ---------------------------------------------------------- |
 | Logs  | Plain text | `./ralph.log` when enabled | Header includes timestamp and git metadata; unresolved git values are recorded as `N/A`. |
 
 ## Workflows
 
+### Initialize logging (disabled — default)
+
+1. Logging is disabled by default (empty `LogFile`).
+2. Enable by setting `--log-file`, `log-file` in config, or `RALPH_LOG_FILE` env.
+3. When disabled, logger returns without a file.
+
 ### Initialize logging (enabled)
 
-1. Evaluate config and env to determine logging enabled/disabled.
-2. Determine log file path from resolved config; if the logger is invoked with an empty path, create a temp file.
-3. Create log directory if it does not exist.
-4. Open file in append or truncate mode.
-5. Write header with timestamp and git branch/commit (or `N/A` when git metadata cannot be resolved).
-
-### Initialize logging (disabled)
-
-1. Logging is disabled by default (`NoLog=true`).
-2. If `NoLog` is true or `RALPH_LOG_ENABLED=0`, logging is disabled.
-3. Logger returns without a file.
+1. Create log directory if it does not exist.
+2. Open file in append or truncate mode.
+3. Write header with timestamp and git branch/commit (or `N/A` when git metadata cannot be resolved).
 
 ### Close logging
 
@@ -113,10 +107,6 @@ internal/
 
 - See configuration spec for option definitions and precedence.
 - Relevant fields:
-  - `NoLog`
-  - `LogFile`
-  - `LogTruncate`
-  - Env vars: `RALPH_LOG_ENABLED`, `RALPH_LOG_APPEND`
 
 ## Permissions
 
@@ -139,11 +129,9 @@ internal/
 
 ## Verifications
 
-- With default configuration, no log file is created.
-- With `RALPH_LOG_ENABLED=0`, no log file is created.
+- By default, no log file is created (empty `LogFile`).
+- With `log-file` set in config, `--log-file` flag, or `RALPH_LOG_FILE` env, a log file is created.
 - With `RALPH_LOG_APPEND=0`, log file is truncated on start.
-- Log header includes timestamp and git branch/commit metadata; unresolved git values are recorded as `N/A`.
-
 ## Appendices
 
 - None.

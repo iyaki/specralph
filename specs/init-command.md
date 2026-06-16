@@ -95,14 +95,13 @@ specs/
   - `Type` values: `select`, `input`, `confirm`.
 
 - InitAnswers
-  - Fields: `AgentName`, `Model`, `AgentMode`, `MaxIterations`, `SpecsDir`, `SpecsIndexFile`, `ImplementationPlanName`, `PromptsDir`, `NoLog`, `LogFile`, `LogTruncate`.
+  - Fields: `AgentName`, `Model`, `AgentMode`, `MaxIterations`, `SpecsDir`, `SpecsIndexFile`, `ImplementationPlanName`, `PromptsDir`, `LogFile`, `LogTruncate`.
   - Mirrors existing configuration fields in [specs/configuration.md](configuration.md).
 
 ### Relationships
 
 - `InitSession` owns `InitQuestion` sequence and collects `InitAnswers`.
 - `InitAnswers` is serialized to TOML keys defined in the configuration spec.
-- `NoLog` is derived from an affirmative/negative logging question and is persisted as the existing `no-log` key.
 
 ### Persistence Notes
 
@@ -177,14 +176,11 @@ specs/
 | Specs index file                          | `specs-index-file`         | input   | `README.md`              | Non-empty file name             |
 | Implementation plan file                  | `implementation-plan-name` | input   | `IMPLEMENTATION_PLAN.md` | Non-empty file name             |
 | Prompts directory                         | `prompts-dir`              | input   | `.ralph/prompts`         | Non-empty path                  |
-| Enable logging?                           | `no-log` (inverted)        | confirm | `no`                     | Boolean                         |
-| Log file path (when logging enabled)      | `log-file`                 | input   | `./ralph.log`            | Non-empty path                  |
-| Truncate log file on each run?            | `log-truncate`             | confirm | `no`                     | Boolean                         |
+| Log file path (optional)                  | `log-file`                 | input   | `` (empty = disabled)    | Non-empty path (optional)       |
 
 ### Generated TOML behavior
 
 - Answers are converted into config keys defined in [specs/configuration.md](configuration.md).
-- `no-log` is written from the logging confirmation answer (`Enable logging?` is the inverse of `no-log`).
 - Writes use atomic temp-file + rename semantics through `internal/config/writer.go`.
 
 ## Permissions
@@ -230,7 +226,5 @@ max-iterations = 25
 specs-dir = "specs"
 specs-index-file = "README.md"
 implementation-plan-name = "IMPLEMENTATION_PLAN.md"
-prompts-dir = ".ralph/prompts"
-no-log = true
 log-truncate = false
 ```

@@ -70,7 +70,7 @@ internal/
 ### Core Entities
 
 - Config
-  - Fields: `ConfigFile`, `MaxIterations`, `PromptFile`, `SpecsDir`, `SpecsIndexFile`, `NoSpecsIndex`, `ImplementationPlanName`, `LogFile`, `NoLog`, `LogTruncate`, `CustomPrompt`, `PromptsDir`, `AgentName`, `Model`, `AgentMode`, `Env`.
+  - Fields: `ConfigFile`, `MaxIterations`, `PromptFile`, `SpecsDir`, `SpecsIndexFile`, `NoSpecsIndex`, `ImplementationPlanName`, `LogFile`, `LogTruncate`, `CustomPrompt`, `PromptsDir`, `AgentName`, `Model`, `AgentMode`, `Env`.
   - `ConfigFile` is selected by CLI/env (`--config`, `RALPH_CONFIG`) and is not a supported TOML key.
   - Remaining fields may be set by flag, env var, and/or config file key as documented below.
 
@@ -142,7 +142,6 @@ internal/
 | `--no-specs-index`                 | `NoSpecsIndex`           | Disable specs index file                        |
 | `--implementation-plan-name`, `-n` | `ImplementationPlanName` | Implementation plan file name                   |
 | `--log-file`, `-l`                 | `LogFile`                | Log file path                                   |
-| `--no-log`                         | `NoLog`                  | Disable logs                                    |
 | `--log-truncate`                   | `LogTruncate`            | Truncate log file before writing                |
 | `--prompt`                         | `CustomPrompt`           | Inline custom prompt                            |
 | `--agent`, `-a`                    | `AgentName`              | Agent name (`opencode`, `claude`, `cursor`)     |
@@ -161,7 +160,6 @@ internal/
 | `RALPH_IMPLEMENTATION_PLAN_NAME` | `ImplementationPlanName` | String file name                |
 | `RALPH_CUSTOM_PROMPT`            | `CustomPrompt`           | Inline prompt text              |
 | `RALPH_LOG_FILE`                 | `LogFile`                | String path                     |
-| `RALPH_LOG_ENABLED`              | `NoLog`                  | `0` disables logging            |
 | `RALPH_LOG_APPEND`               | `LogTruncate`            | `0` truncates (disables append) |
 | `RALPH_PROMPTS_DIR`              | `PromptsDir`             | String path                     |
 | `RALPH_AGENT`                    | `AgentName`              | Agent name                      |
@@ -183,7 +181,6 @@ Notes:
 | `no-specs-index`           | `NoSpecsIndex`           | `no-specs-index = true`                               |
 | `implementation-plan-name` | `ImplementationPlanName` | `implementation-plan-name = "IMPLEMENTATION_PLAN.md"` |
 | `log-file`                 | `LogFile`                | `log-file = "./ralph.log"`                            |
-| `no-log`                   | `NoLog`                  | `no-log = true`                                       |
 | `log-truncate`             | `LogTruncate`            | `log-truncate = false`                                |
 | `custom-prompt`            | `CustomPrompt`           | `custom-prompt = "..."`                               |
 | `prompts-dir`              | `PromptsDir`             | `prompts-dir = "./prompts"`                           |
@@ -205,7 +202,6 @@ Notes:
 | `SpecsIndexFile`         | `README.md`                |
 | `ImplementationPlanName` | `IMPLEMENTATION_PLAN.md`   |
 | `PromptsDir`             | `$HOME/.ralph`             |
-| `NoLog`                  | `true`                     |
 | `LogFile`                | `./ralph.log`              |
 | `AgentName`              | `opencode`                 |
 | `Model`                  | none (optional)            |
