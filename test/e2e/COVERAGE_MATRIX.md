@@ -56,7 +56,7 @@ Test identifiers use Go `TestName[/Subtest]` notation.
 | stderr stream | Fatal startup/validation errors are emitted with non-zero exit | `TestE2EMissingPromptFile`, `TestE2EConfigByPromptInvalidFrontMatterFailsBeforeAgentRun`, `TestE2EConfigPrecedence_ConfigFileKeyInBaseConfigFails`, `TestE2EConfigLocalOverlay_InvalidOverlayFailsBeforeAgentExecution` |
 | exit codes | Success and failure exit semantics are deterministic | `TestE2ECompletionFlow`, `TestE2EMaxIterations`, `TestE2EReturnErrorPath`, `TestE2EAgentSelection/UnknownAgentReturnsError` |
 | deterministic slow-complete path | `RALPH_TEST_AGENT_MODE=slow_complete` delays deterministically before emitting completion | `TestE2ESlowCompletePath` |
-| log creation and disablement | Logging defaults to disabled and can be enabled by env/config/flags | `TestE2ELoggingFlags/DefaultNoLog`, `TestE2ELoggingFlags/EnabledViaEnv`, `TestE2ELoggingFlags/EnabledViaConfig`, `TestE2ELoggingFlags/NoLog`, `TestE2ELogging` |
+  | log creation and disablement | Logging defaults to disabled and can be enabled by path flag/config | `TestE2ELoggingFlags/DefaultNoLog`, `TestE2ELoggingFlags/EnabledViaFlag`, `TestE2ELoggingFlags/EnabledViaConfig`, `TestE2ELoggingFlags/FlagOverridesConfig`, `TestE2ELoggingFlags/LogTruncate`, `TestE2ELogging` |
 | log truncation and content parity | Truncation mode and stdout parity are preserved | `TestE2ELoggingFlags/LogTruncate`, `TestE2ELoggingStdoutParity` |
 | log file security | Log file permissions are restrictive (`0600`) | `TestE2ELoggingPermissions` |
 

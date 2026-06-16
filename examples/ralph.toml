@@ -20,7 +20,6 @@ prompts-dir = ".ralph/prompts"
 
 # Logging Configuration
 log-file = "ralph.log"
-no-log = false
 log-truncate = false
 
 # Child agent environment overrides (optional)

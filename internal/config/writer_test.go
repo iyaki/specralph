@@ -16,7 +16,6 @@ func createTestConfig() *config.Config {
 		SpecsIndexFile:         "INDEX.md",
 		ImplementationPlanName: "PLAN.md",
 		LogFile:                "custom.log",
-		NoLog:                  true,
 		LogTruncate:            true,
 		CustomPrompt:           "You are a helpful assistant.",
 		PromptsDir:             "/tmp/prompts",
@@ -46,9 +45,6 @@ func verifyLogSettings(t *testing.T, expected, actual *config.Config) {
 	t.Helper()
 	if actual.LogFile != expected.LogFile {
 		t.Errorf("Expected LogFile %s, got %s", expected.LogFile, actual.LogFile)
-	}
-	if actual.NoLog != expected.NoLog {
-		t.Errorf("Expected NoLog %v, got %v", expected.NoLog, actual.NoLog)
 	}
 	if actual.LogTruncate != expected.LogTruncate {
 		t.Errorf("Expected LogTruncate %v, got %v", expected.LogTruncate, actual.LogTruncate)

@@ -65,7 +65,6 @@ const (
 	questionKeyImplementationPlanName = "implementation-plan-name"
 	questionKeyPromptsDir             = "prompts-dir"
 	questionKeyOverwriteExisting      = "overwrite-existing"
-	questionKeyEnableLogging          = "enable-logging"
 	questionKeyLogFile                = "log-file"
 	questionKeyLogTruncate            = "log-truncate"
 	questionKeyWriteConfiguration     = "write-configuration"
@@ -110,7 +109,6 @@ type InitAnswers struct {
 	SpecsIndexFile         string
 	ImplementationPlanName string
 	PromptsDir             string
-	NoLog                  bool
 	LogFile                string
 	LogTruncate            bool
 }
@@ -126,7 +124,6 @@ var initAnswerAppliers = map[string]initAnswerApplier{
 	questionKeySpecsIndexFile:         setInitAnswerSpecsIndexFile,
 	questionKeyImplementationPlanName: setInitAnswerImplementationPlanName,
 	questionKeyPromptsDir:             setInitAnswerPromptsDir,
-	questionKeyEnableLogging:          setInitAnswerEnableLogging,
 	questionKeyLogFile:                setInitAnswerLogFile,
 	questionKeyLogTruncate:            setInitAnswerLogTruncate,
 }
@@ -296,9 +293,6 @@ func seedInitStringDefaults(answers *InitAnswers, existingConfig *config.Config)
 }
 
 func seedInitBoolDefaults(answers *InitAnswers, existingConfig *config.Config, meta toml.MetaData) {
-	if meta.IsDefined("no-log") {
-		answers.NoLog = existingConfig.NoLog
-	}
 	if meta.IsDefined("log-truncate") {
 		answers.LogTruncate = existingConfig.LogTruncate
 	}
@@ -403,12 +397,12 @@ func buildInitPreviewLines(session *InitSession) []string {
 		fmt.Sprintf("prompts-dir: %s", answers.PromptsDir),
 	)
 
-	if answers.NoLog {
-		return append(lines, "logging-enabled: no")
+	if answers.LogFile == "" {
+		return append(lines, "logging: disabled")
 	}
 
 	return append(lines,
-		"logging-enabled: yes",
+		"logging: enabled",
 		fmt.Sprintf("log-file: %s", answers.LogFile),
 		fmt.Sprintf("log-truncate: %s", boolToConfirmValue(answers.LogTruncate)),
 	)
@@ -422,8 +416,7 @@ func defaultInitAnswers() *InitAnswers {
 		SpecsIndexFile:         defaultInitSpecsIndexFile,
 		ImplementationPlanName: defaultInitImplementationPlanName,
 		PromptsDir:             defaultInitPromptsDir,
-		NoLog:                  true,
-		LogFile:                defaultInitLogFile,
+		LogFile:                "",
 		LogTruncate:            false,
 	}
 }
@@ -434,15 +427,13 @@ func runInitQuestionnaire(session *InitSession) error {
 		return err
 	}
 
-	if session.Answers.NoLog {
-		return nil
-	}
+	if session.Answers.LogFile != "" {
+		loggingQuestions := loggingInitQuestions(session.Answers)
+		session.Questions = append(session.Questions, loggingQuestions...)
 
-	loggingQuestions := loggingInitQuestions(session.Answers)
-	session.Questions = append(session.Questions, loggingQuestions...)
-
-	if err := askQuestions(session, loggingQuestions); err != nil {
-		return err
+		if err := askQuestions(session, loggingQuestions); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -476,13 +467,12 @@ func baseInitQuestions(defaults *InitAnswers) []InitQuestion {
 			nil,
 		),
 		newInputQuestion(questionKeyPromptsDir, "Prompts directory", defaults.PromptsDir, true, nil),
-		newConfirmQuestion(questionKeyEnableLogging, "Enable logging?", boolToConfirmValue(!defaults.NoLog)),
+		newInputQuestion(questionKeyLogFile, "Log file path (optional)", defaults.LogFile, false, nil),
 	}
 }
 
 func loggingInitQuestions(defaults *InitAnswers) []InitQuestion {
 	return []InitQuestion{
-		newInputQuestion(questionKeyLogFile, "Log file path", defaults.LogFile, true, nil),
 		newConfirmQuestion(
 			questionKeyLogTruncate,
 			"Truncate log file on each run?",
@@ -700,16 +690,6 @@ func setInitAnswerPromptsDir(answers *InitAnswers, value string) error {
 	return nil
 }
 
-func setInitAnswerEnableLogging(answers *InitAnswers, value string) error {
-	enableLogging, ok := parseConfirmAnswer(value)
-	if !ok {
-		return errInvalidConfirmAnswer
-	}
-
-	answers.NoLog = !enableLogging
-
-	return nil
-}
 
 func setInitAnswerLogFile(answers *InitAnswers, value string) error {
 	answers.LogFile = value
@@ -776,7 +756,6 @@ func buildConfigFromAnswers(answers *InitAnswers) *config.Config {
 		SpecsIndexFile:         answers.SpecsIndexFile,
 		ImplementationPlanName: answers.ImplementationPlanName,
 		PromptsDir:             answers.PromptsDir,
-		NoLog:                  answers.NoLog,
 		LogFile:                answers.LogFile,
 		LogTruncate:            answers.LogTruncate,
 	}

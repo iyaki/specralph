@@ -10,39 +10,25 @@ import (
 	"github.com/iyaki/ralphex/internal/logger"
 )
 
-func TestNewLoggerDisabledByConfig(t *testing.T) {
-	cfg := &config.Config{NoLog: true}
+func TestNewLoggerDisabledWhenLogFileEmpty(t *testing.T) {
+	cfg := &config.Config{LogFile: ""}
 	l, err := logger.NewLogger(cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if l.Enabled() {
-		t.Fatal("expected logger to be disabled")
+		t.Fatal("expected logger to be disabled when LogFile is empty")
 	}
 	if l.File() != nil {
 		t.Fatal("expected no file when disabled")
 	}
 }
 
-func TestNewLoggerDoesNotApplyEnvOverridesDirectly(t *testing.T) {
-	t.Setenv("RALPH_LOG_ENABLED", "0")
-	cfg := &config.Config{NoLog: false}
-	l, err := logger.NewLogger(cfg)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !l.Enabled() {
-		t.Fatal("expected logger to use resolved config and remain enabled")
-	}
-	if err := l.Close(); err != nil {
-		t.Fatalf("close failed: %v", err)
-	}
-}
 
 func TestNewLoggerCreatesAndAppendsFile(t *testing.T) {
 	dir := t.TempDir()
 	logPath := filepath.Join(dir, "logs", "ralph.log")
-	cfg := &config.Config{NoLog: false, LogFile: logPath, LogTruncate: false}
+	cfg := &config.Config{LogFile: logPath, LogTruncate: false}
 
 	l, err := logger.NewLogger(cfg)
 	if err != nil {
@@ -74,7 +60,7 @@ func TestNewLoggerTruncatesWhenConfigured(t *testing.T) {
 		t.Fatalf("failed to seed log file: %v", err)
 	}
 
-	cfg := &config.Config{NoLog: false, LogFile: logPath, LogTruncate: true}
+	cfg := &config.Config{LogFile: logPath, LogTruncate: true}
 
 	l, err := logger.NewLogger(cfg)
 	if err != nil {
@@ -97,7 +83,7 @@ func TestNewLoggerTruncateCreatesSecureFilePermissions(t *testing.T) {
 	dir := t.TempDir()
 	logPath := filepath.Join(dir, "new-ralph.log")
 
-	cfg := &config.Config{NoLog: false, LogFile: logPath, LogTruncate: true}
+	cfg := &config.Config{LogFile: logPath, LogTruncate: true}
 
 	l, err := logger.NewLogger(cfg)
 	if err != nil {
@@ -117,24 +103,6 @@ func TestNewLoggerTruncateCreatesSecureFilePermissions(t *testing.T) {
 	}
 }
 
-func TestNewLoggerUsesTempFileWhenLogPathEmpty(t *testing.T) {
-	cfg := &config.Config{NoLog: false, LogFile: ""}
-
-	l, err := logger.NewLogger(cfg)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if l.File() == nil {
-		t.Fatal("expected temp log file to be created")
-	}
-	path := l.File().Name()
-	if !strings.Contains(filepath.Base(path), "ralph-") {
-		t.Fatalf("expected temp file naming pattern, got %q", path)
-	}
-	if err := l.Close(); err != nil {
-		t.Fatalf("close failed: %v", err)
-	}
-}
 
 func TestCloseWithoutFile(t *testing.T) {
 	l := &logger.Logger{}

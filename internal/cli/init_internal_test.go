@@ -49,8 +49,7 @@ func invalidAnswersWithRetriesInput() string {
 		"",
 		"",
 		"",
-		"yes",
-		"",
+		"ralph.log",
 		"maybe",
 		"no",
 		"",
@@ -144,7 +143,7 @@ func TestInitCommandAsksQuestionsInSpecifiedOrder(t *testing.T) {
 		"Specs index file",
 		"Implementation plan file",
 		"Prompts directory",
-		"Enable logging?",
+		"Log file path (optional)",
 		"Write configuration now?",
 	})
 }
@@ -167,6 +166,7 @@ func TestInitCommandPreviewDeclinedSkipsWrite(t *testing.T) {
 	assertOutputContainsAll(t, output, []string{
 		"Configuration preview:",
 		"agent: opencode",
+		"logging: disabled",
 		"Write configuration now?",
 		"Initialization cancelled; configuration was not written.",
 	})
@@ -199,7 +199,7 @@ func TestInitCommandRePromptsForInvalidAnswers(t *testing.T) {
 	assertFileContainsAll(t, filepath.Join(tmp, "ralph.toml"), []string{
 		`agent = "claude"`,
 		"max-iterations = 2",
-		"no-log = false",
+		`log-file = "ralph.log"`,
 	})
 }
 
@@ -284,7 +284,6 @@ func seededInitConfigLines() []string {
 		`specs-index-file = "INDEX.md"`,
 		`implementation-plan-name = "PLAN.md"`,
 		`prompts-dir = ".ralph/custom-prompts"`,
-		"no-log = false",
 		`log-file = "./logs/custom.log"`,
 		"log-truncate = true",
 	}
@@ -300,8 +299,7 @@ func seededInitPromptDefaults() []string {
 		"Specs index file [INDEX.md]:",
 		"Implementation plan file [PLAN.md]:",
 		"Prompts directory [.ralph/custom-prompts]:",
-		"Enable logging? [yes]:",
-		"Log file path [./logs/custom.log]:",
+		"Log file path (optional) [./logs/custom.log]:",
 		"Truncate log file on each run? [yes]:",
 		"Write configuration now? [yes]:",
 	}
@@ -384,11 +382,6 @@ func TestApplyInitAnswerErrorPaths(t *testing.T) {
 	err = applyInitAnswer(answers, questionKeyMaxIterations, "abc")
 	if err == nil || !strings.Contains(err.Error(), "invalid max-iterations answer") {
 		t.Fatalf("expected invalid max-iterations error, got %v", err)
-	}
-
-	err = applyInitAnswer(answers, questionKeyEnableLogging, "maybe")
-	if err == nil || !errors.Is(err, errInvalidConfirmAnswer) {
-		t.Fatalf("expected invalid confirm answer error, got %v", err)
 	}
 
 	err = applyInitAnswer(answers, questionKeyLogTruncate, "maybe")

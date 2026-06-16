@@ -25,33 +25,24 @@ type Logger struct {
 
 // NewLogger creates a new logger based on configuration.
 func NewLogger(cfg *config.Config) (*Logger, error) {
+	enabled := cfg.LogFile != ""
+
 	logger := &Logger{
-		enabled: !cfg.NoLog,
+		enabled: enabled,
 	}
 
-	if !logger.enabled {
+	if !enabled {
 		return logger, nil
 	}
 
-	logFile := cfg.LogFile
-	if logFile == "" {
-		tmpFile, err := os.CreateTemp("", "ralph-*.log")
-		if err != nil {
-			return nil, fmt.Errorf("failed to create temp log file: %w", err)
-		}
-
-		logFile = tmpFile.Name()
-		_ = tmpFile.Close()
-	}
-
-	logDir := filepath.Dir(logFile)
+	logDir := filepath.Dir(cfg.LogFile)
 	if err := os.MkdirAll(logDir, logDirPerm); err != nil {
 		return nil, fmt.Errorf("failed to create log directory: %w", err)
 	}
 
-	file, err := openLogFile(logFile, cfg.LogTruncate)
+	file, err := openLogFile(cfg.LogFile, cfg.LogTruncate)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open log file %s: %w", logFile, err)
+		return nil, fmt.Errorf("failed to open log file %s: %w", cfg.LogFile, err)
 	}
 
 	logger.file = file
