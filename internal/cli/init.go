@@ -847,3 +847,21 @@ func SetIsInteractiveTerminalForTest(value bool) {
 func GetIsInteractiveTerminalForTest() bool {
 	return isInteractiveTerminal()
 }
+
+// BoolFlagOverride holds the result of reading a bool flag.
+type BoolFlagOverride struct {
+	Changed bool
+	Value   bool
+}
+
+// ReadBoolFlagOverrideForTest exports readBoolFlagOverride for testing.
+func ReadBoolFlagOverrideForTest(cmd *cobra.Command, flagName string) (BoolFlagOverride, error) {
+	result, err := readBoolFlagOverride(cmd, flagName)
+
+	return BoolFlagOverride{Changed: result.changed, Value: result.value}, err
+}
+
+// ReadEnvFlagOverridesForTest exports readEnvFlagOverrides for testing.
+func ReadEnvFlagOverridesForTest(cmd *cobra.Command) (map[string]string, error) {
+	return readEnvFlagOverrides(cmd)
+}
