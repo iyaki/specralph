@@ -190,20 +190,20 @@ func TestWriteConfig_EmptyStringsShouldBeOmitted(t *testing.T) {
 		LogFile:                "ralph.log",
 		LogTruncate:            false,
 	}
-	
+
 	err := config.WriteConfig(path, cfg)
 	if err != nil {
 		t.Fatalf("WriteConfig failed: %v", err)
 	}
-	
+
 	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("ReadFile failed: %v", err)
 	}
-	
+
 	contentStr := string(content)
 	t.Logf("Generated TOML:\n%s", contentStr)
-	
+
 	// Should NOT contain empty string values
 	if strings.Contains(contentStr, `config-file = ""`) {
 		t.Error("Config file should not write empty config-file field")
