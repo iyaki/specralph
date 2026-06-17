@@ -107,7 +107,7 @@ func TestInitCommandWritesDefaultConfigFile(t *testing.T) {
 	if !strings.Contains(contentText, `agent = "opencode"`) {
 		t.Fatalf("expected config to include default agent, got %q", contentText)
 	}
-	
+
 	// Verify empty optional fields are omitted
 	if strings.Contains(contentText, `log-file`) {
 		t.Errorf("empty log-file should be omitted, got %q", contentText)
@@ -328,7 +328,6 @@ func assertOutputContainsAll(t *testing.T, output string, expectedFragments []st
 	}
 }
 
-
 func TestInitCommandSeedsQuestionDefaultsFromExistingConfig(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "ralph.toml")
@@ -544,8 +543,8 @@ func TestAskQuestionsSuccess(t *testing.T) {
 	cmd.SetIn(strings.NewReader("test-answer\n"))
 
 	session := &InitSession{
-		Reader: bufio.NewReader(cmd.InOrStdin()),
-		Writer: out,
+		Reader:  bufio.NewReader(cmd.InOrStdin()),
+		Writer:  out,
 		Answers: &InitAnswers{},
 	}
 
@@ -567,11 +566,11 @@ func TestStandardQuestionnaireRunnerAskQuestions(t *testing.T) {
 	cmd.SetIn(strings.NewReader("answer1\nanswer2\n"))
 
 	session := &InitSession{
-		Reader: bufio.NewReader(cmd.InOrStdin()),
-		Writer: out,
+		Reader:  bufio.NewReader(cmd.InOrStdin()),
+		Writer:  out,
 		Answers: &InitAnswers{},
 	}
-	
+
 	runner := &standardQuestionnaireRunner{}
 	questions := []InitQuestion{
 		newInputQuestion(questionKeyModel, "Model", "", false, nil),
