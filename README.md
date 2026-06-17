@@ -61,6 +61,15 @@ Build from source:
 ```bash
 make build
 ./bin/ralph --help
+./bin/ralph version
+```
+
+Build with custom version:
+
+```bash
+make build VERSION=1.2.3
+./bin/ralph version
+# ralph v1.2.3
 ```
 
 Run directly from source without building:
@@ -123,6 +132,7 @@ ralph --env HTTP_PROXY=http://127.0.0.1:8080 build
 | `ralph <prompt> [scope]` | Alias to `ralph run <prompt> [scope]` when `<prompt>` is not a subcommand |
 | `ralph init` | Generate a starter config file |
 | `ralph run init` | Run a prompt named `init` |
+| `ralph version` | Print the version number |
 
 Useful examples:
 
@@ -144,6 +154,8 @@ ralph --prompt-file ./prompts/review.md review
 
 # Per-run child agent environment override
 ralph --env HTTP_PROXY=http://127.0.0.1:8080 build
+# Check Ralph version
+ralph version
 ```
 
 ### `ralph init`

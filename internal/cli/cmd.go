@@ -39,6 +39,7 @@ For extended documentation, examples, and configuration options, visit https://g
 	// Register subcommands
 	cmd.AddCommand(NewInitCommand())
 	cmd.AddCommand(NewRunCommand())
+	cmd.AddCommand(NewVersionCommand())
 
 	return cmd
 }

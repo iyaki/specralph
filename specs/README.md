@@ -28,6 +28,7 @@ Design docs and technical specifications
 - [agents/oh-my-pi.md](agents/oh-my-pi.md)
 - [init-command.md](init-command.md)
 - [run-command.md](run-command.md)
+- [version-command.md](version-command.md)
 - [config-by-prompt.md](config-by-prompt.md)
 - [config-local-overlay.md](config-local-overlay.md)
 - [agent-env-overrides.md](agent-env-overrides.md)
