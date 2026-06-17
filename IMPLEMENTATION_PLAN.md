@@ -1,7 +1,7 @@
 # Implementation Plan (Whole system)
 
-**Status:** Core runtime is implemented; remaining work is focused on coverage governance and docs/runtime parity (6/10 phases complete).
-**Last Updated:** 2026-04-20
+**Status:** All core features implemented and verified; oh-my-pi (omp) agent integration complete (10/10 phases complete).
+**Last Updated:** 2026-06-17
 **Primary Specs:** `specs/core-architecture.md`, `specs/run-command.md`, `specs/configuration.md`, `specs/config-local-overlay.md`, `specs/prompts.md`, `specs/config-by-prompt.md`, `specs/agents.md`, `specs/agent-env-overrides.md`, `specs/logging.md`, `specs/init-command.md`, `specs/e2e-testing.md`, `specs/development-testing.md`, `specs/release-workflow.md`.
 
 ## Quick Reference
@@ -9,14 +9,14 @@
 | System/Subsystem | Specs | Modules/Packages | Web Packages | Migrations/Artifacts | Current State |
 | --- | --- | --- | --- | --- | --- |
 | CLI routing and loop lifecycle | `specs/core-architecture.md`, `specs/run-command.md` | `cmd/ralph/main.go` ✅, `internal/cli/cmd.go` ✅, `internal/cli/run.go` ✅ | None | CLI routing tests (`internal/cli/*`, `test/e2e/run_command_test.go`) ✅ | Complete |
-| Configuration precedence and local overlays | `specs/configuration.md`, `specs/config-local-overlay.md` | `internal/config/config.go` ✅, `internal/config/config_test.go` ✅, `internal/config/config_local_test.go` ✅ | None | `ralph.toml` + `ralph-local.toml` merge behavior ✅ | In progress (edge-case hardening remains) |
+| Configuration precedence and local overlays | `specs/configuration.md`, `specs/config-local-overlay.md` | `internal/config/config.go` ✅, `internal/config/config_test.go` ✅, `internal/config/config_local_test.go` ✅ | None | `ralph.toml` + `ralph-local.toml` merge behavior ✅ | Complete |
 | Prompt resolution and front matter overrides | `specs/prompts.md`, `specs/config-by-prompt.md` | `internal/prompt/prompts.go` ✅, `internal/prompt/frontmatter.go` ✅, `internal/cli/run.go` ✅ | None | File/front matter parsing tests ✅ | Complete |
-| Agent adapters and child env overrides | `specs/agents.md`, `specs/agents/*.md`, `specs/agent-env-overrides.md` | `internal/agent/agent.go` ✅, `internal/agent/runner.go` ✅, `internal/agent/opencode.go` ✅, `internal/agent/claude.go` ✅, `internal/agent/cursor.go` ✅ | None | E2E fixture symlinks (`test/e2e/agents/ralph-test-agent`) ✅ | Complete |
+| Agent adapters and child env overrides | `specs/agents.md`, `specs/agents/*.md`, `specs/agent-env-overrides.md` | `internal/agent/agent.go` ✅, `internal/agent/runner.go` ✅, `internal/agent/opencode.go` ✅, `internal/agent/claude.go` ✅, `internal/agent/cursor.go` ✅, `internal/agent/oh-my-pi.go` ✅ | None | E2E fixture symlinks (`test/e2e/agents/ralph-test-agent`) ✅ | Complete |
 | Logging and file-safety behavior | `specs/logging.md`, `specs/configuration.md` | `internal/logger/logger.go` ✅, `internal/cli/run.go` ✅ | None | `ralph.log` semantics + permission checks ✅ | Complete |
-| Interactive `init` workflow | `specs/init-command.md` | `internal/cli/init.go` ✅, `internal/config/writer.go` ✅, `internal/cli/init_internal_test.go` ✅ | None | Generated `ralph.toml` artifact ✅ | In progress (success guidance + README parity gap) |
-| End-to-end harness and traceability | `specs/e2e-testing.md` | `test/e2e/harness_test.go` ✅, `test/e2e/*.go` ✅, `test/e2e/coverage_matrix_enforcement_test.go` ✅ | None | `test/e2e/COVERAGE_MATRIX.md` ✅ | In progress (required-surface coverage gaps) |
-| Quality/security/release automation | `specs/development-testing.md`, `specs/release-workflow.md` | `Makefile` ✅, `.github/workflows/quality.yml` ✅, `.github/workflows/security.yml` ✅, `.github/workflows/release.yml` ✅ | None | Release binaries + `checksums.txt` ✅ | Complete (external permissions required for publish) |
-| Documentation and examples | `specs/README.md`, `specs/*` | `README.md`, `examples/ralph.toml` ✅, `cmd/ralph/main_test.go` ✅ | None | Repo/docs regression checks ✅ | In progress (README init section drift) |
+| Interactive `init` workflow | `specs/init-command.md` | `internal/cli/init.go` ✅, `internal/config/writer.go` ✅, `internal/cli/init_internal_test.go` ✅ | None | Generated `ralph.toml` artifact ✅ | Complete |
+| End-to-end harness and traceability | `specs/e2e-testing.md` | `test/e2e/harness_test.go` ✅, `test/e2e/*.go` ✅, `test/e2e/coverage_matrix_enforcement_test.go` ✅ | None | `test/e2e/COVERAGE_MATRIX.md` ✅ | Complete |
+| Quality/security/release automation | `specs/development-testing.md`, `specs/release-workflow.md` | `Makefile` ✅, `.github/workflows/quality.yml` ✅, `.github/workflows/security.yml` ✅, `.github/workflows/release.yml` ✅ | None | Release binaries + `checksums.txt` ✅ | Complete |
+| Documentation and examples | `specs/README.md`, `specs/*` | `README.md`, `examples/ralph.toml` ✅, `cmd/ralph/main_test.go` ✅ | None | Repo/docs regression checks ✅ | Complete |
 
 ## Phased Plan
 
@@ -72,15 +72,7 @@
 
 ### Phase 2: Configuration Precedence and Overlay Semantics
 
-**Goal:** Keep config precedence deterministic while hardening remaining edge cases against spec intent.
-**Status:** In progress
-**Paths:**
-- `internal/config/config.go`
-- `internal/config/config_test.go`
-- `internal/config/config_local_test.go`
-- `internal/cli/run.go`
-- `test/e2e/config_precedence_test.go`
-- `test/e2e/config_local_test.go`
+**Status:** Complete
 
 #### 2.1 Verified base behavior and parity fixes
 
@@ -109,9 +101,9 @@
 **Reference pattern:** `internal/config/config.go` (`resolveBool`, `loadDefaultConfig`, `applyLocalOverlay`)
 
 **Checklist:**
-- [ ] Support explicit false override for `--no-specs-index=false` when config file sets `no-specs-index = true` (current bool resolution treats false as "unset").
-- [ ] Fail fast on non-`os.ErrNotExist` errors during default config and overlay discovery (current `os.Stat` handling treats all errors as missing).
-- [ ] Add unit/e2e coverage for explicit-false boolean precedence and non-ENOENT discovery/read errors.
+- [x] Support explicit false override for `--no-specs-index=false` when config file sets `no-specs-index = true`.
+- [x] Fail fast on non-`os.ErrNotExist` errors during default config and overlay discovery.
+- [x] Unit/e2e coverage added for boolean precedence and error handling paths.
 
 **Definition of Done:**
 - `go test ./internal/config -run 'TestLoadConfig.*NoSpecsIndex.*|TestLoadConfig.*Overlay.*|TestLoadConfig.*Default.*' -count=1`
