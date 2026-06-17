@@ -7,6 +7,14 @@ GO=go
 INSTALL_PATH=/usr/local/bin
 BUILD_OUT ?= bin/ralph
 ARGS ?=
+# Version variables
+VERSION ?= 0.0.0
+COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+DATE ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+LDFLAGS := -X github.com/iyaki/ralphex/internal/version.Version=$(VERSION) \
+           -X github.com/iyaki/ralphex/internal/version.Commit=$(COMMIT) \
+           -X github.com/iyaki/ralphex/internal/version.Date=$(DATE)
 
 # Default target
 all: build
@@ -91,7 +99,7 @@ arch:
 
 # Build the binary
 build:
-	$(GO) build -o $(BUILD_OUT) ./cmd/ralph
+	$(GO) build -ldflags "$(LDFLAGS)" -o $(BUILD_OUT) ./cmd/ralph
 
 # Clean build artifacts
 clean:

@@ -25,6 +25,9 @@ components:
   prompt:
     in:
       - internal/prompt/**
+  buildversion:
+    in:
+      - internal/buildversion/**
   test:
     in:
       - test/**
@@ -47,6 +50,7 @@ deps:
       - executor
       - logger
       - prompt
+      - buildversion
     anyVendorDeps: true
   agent:
     mayDependOn:
@@ -72,7 +76,10 @@ deps:
     anyVendorDeps: true
   test:
     anyProjectDeps: true
-    anyVendorDeps: true
+  buildversion:
+    mayDependOn:
+      - buildversion
+    anyVendorDeps: false
   root-test:
     anyProjectDeps: true
     anyVendorDeps: true

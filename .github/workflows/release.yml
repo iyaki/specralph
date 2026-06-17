@@ -131,7 +131,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
-          # GOTOOLCHAIN: go1.25.7+auto
+          VERSION: ${{ needs.prepare.outputs.tag }}
         run: |
           set -euo pipefail
           TAG="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}"
@@ -139,7 +139,9 @@ jobs:
           if [ "$GOOS" = "windows" ]; then
             BIN_NAME="${BIN_NAME}.exe"
           fi
-          go build -trimpath -ldflags "-s -w" -o "$BIN_NAME" ./cmd/ralph
+          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
+          DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          go build -trimpath -ldflags "-s -w -X github.com/iyaki/ralphex/internal/version.Version=${VERSION#v} -X github.com/iyaki/ralphex/internal/version.Commit=${COMMIT} -X github.com/iyaki/ralphex/internal/version.Date=${DATE}" -o "$BIN_NAME" ./cmd/ralph
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v7
