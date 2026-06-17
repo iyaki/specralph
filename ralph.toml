@@ -3,6 +3,6 @@ specs-dir = "specs"
 specs-index-file = "README.md"
 no-specs-index = false
 implementation-plan-name = "IMPLEMENTATION_PLAN.md"
-log-file = ".ralph/logs"
+log-file = ".ralph/logs/ralph.log"
 prompts-dir = ".ralph/prompts"
 agent = "oh-my-pi"
