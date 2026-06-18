@@ -21,11 +21,11 @@ It is a Ralph-Wiggum inspired spec-driven agent runner.
 It loads prompts from files (with optional inline overrides) and comes with build/plan presets.
 
 The loop runs until the agent emits <promise>COMPLETE</promise> or max iterations is reached.
-When writing custom prompts, include <promise>COMPLETE</promise> at the end to signal completion.
+When writing custom prompts, include <promise>COMPLETE</promise> or <COMPLETION_SIGNAL> at the end to signal completion.
 
 Custom Prompt Example:
   ralph --prompt "Implement feature X. When done, output <promise>COMPLETE</promise>"
-  ralph --prompt "Task Y. Output <COMPLETION_SIGNAL>"
+  ralph --prompt "Task X, Y and Z. Output <COMPLETION_SIGNAL> when everything is done"
 
 For extended documentation, examples, and configuration options, visit https://github.com/iyaki/ralphex.`,
 		SilenceUsage:  true,
