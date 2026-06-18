@@ -1,6 +1,6 @@
 # Implementation Plan (Help Prompts)
 
-**Status:** Phase 1 complete - custom prompt examples added to help text
+**Status:** Phase 2 complete - README updated with custom prompt examples
 **Last Updated:** 2026-06-18
 **Primary Specs:** `specs/prompts.md`, `specs/README.md`
 
@@ -10,7 +10,7 @@
 | --- | --- | --- | --- | --- | --- |
 | Help text generation | `specs/prompts.md` | `internal/cli/cmd.go` ✅ | None | README.md ✅ | Complete (signal + example) |
 | Completion signal docs | `specs/prompts.md` | `internal/prompt/prompts.go` ✅ | None | Examples ✅ | Complete |
-| Custom prompt examples | `specs/prompts.md` | Help text ✅, README | None | `[ ]` Example snippets | **Complete** |
+| Custom prompt examples | `specs/prompts.md` | Help text ✅, README ✅ | None | `[x]` Example snippets | **Complete** |
 
 ## Analysis Summary
 
@@ -76,7 +76,7 @@ This gap makes it slightly harder for users to create their first custom prompt 
 ### Phase 2: Update README with Custom Prompt Example
 
 **Goal:** Add a quick example in README for users creating custom prompts
-**Status:** `[ ]` Not started
+**Status:** `[x]` Complete
 **Paths:**
 - `README.md`
 - `cmd/ralph/main_test.go` (regression tests)
@@ -87,19 +87,18 @@ This gap makes it slightly harder for users to create their first custom prompt 
 - `README.md`
 
 **Checklist:**
-- `[ ]` Add a "Creating Custom Prompts" subsection or enhance existing section
-- `[ ]` Show inline prompt example with completion signal
-- `[ ]` Show prompt file example with completion signal
-- `[ ] ] Mention placeholder auto-replacement
+- `[x]` Add a "Creating Custom Prompts" subsection or enhance existing section
+- `[x]` Show inline prompt example with completion signal
+- `[x]` Show prompt file example with completion signal
+- `[x]` Mention placeholder auto-replacement
 
 **Definition of Done:**
-- `go test ./cmd/ralph -run TestReadmeDocumentsRalphexRepoAndRalphCli -count=1` passes
-- README clearly shows custom prompt pattern
+- `[x]` `go test ./cmd/ralph -run TestReadmeDocumentsRalphexRepoAndRalphCli -count=1` passes
+- `[x]` README clearly shows custom prompt pattern
 - Files touched: `README.md`, `cmd/ralph/main_test.go`
 
 **Risks/Dependencies:**
 - README already lengthy; example must be concise
-
 ### Phase 3: Verification
 
 **Goal:** Ensure examples are visible and accurate

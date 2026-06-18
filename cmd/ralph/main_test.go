@@ -82,6 +82,12 @@ func TestReadmeDocumentsRalphexRepoAndRalphCli(t *testing.T) {
 	if !strings.Contains(readme, "The repository is `iyaki/ralphex`, but the CLI command remains `ralph`.") {
 		t.Fatalf("expected README to explain the repo and CLI naming split")
 	}
+	if !strings.Contains(readme, "<promise>COMPLETE</promise>") {
+		t.Fatalf("expected README to document the completion signal")
+	}
+	if !strings.Contains(readme, "Creating Custom Prompts") {
+		t.Fatal("expected README to include Creating Custom Prompts section")
+	}
 }
 
 func TestGoModulePathUsesRalphex(t *testing.T) {
