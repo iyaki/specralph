@@ -77,7 +77,7 @@ specs/
 
 ### Execute omp (happy path)
 
-1. Build args: `--print`, `--no-title`, optional `--model <model>`, `<prompt>`.
+1. Build args: `--print`, `--no-title`, `--no-session`, optional `--model <model>`, `<prompt>`.
 2. Execute `omp` CLI.
 3. Stream stdout/stderr and return combined output.
 
@@ -126,5 +126,7 @@ specs/
 ### Invocation
 
 ```
-omp --print [--model <model>] <prompt>
+omp --print --no-title --no-session [--model <model>] <prompt>
 ```
+
+The `--no-session` flag is always included to ensure ephemeral execution without saving session history or using memory/skills from previous sessions.
