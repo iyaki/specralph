@@ -1,6 +1,6 @@
 # Implementation Plan (Oh My Pi Agent)
 
-**Status:** Implemented with documentation gap (spec mentions --no-session, code does not)
+**Status:** ✅ Complete (Phase 1 implemented and tested)
 **Last Updated:** 2026-06-18
 **Primary Specs:** `specs/agents/oh-my-pi.md`, `specs/agents.md`
 
@@ -8,12 +8,12 @@
 
 | System/Subsystem | Specs | Modules/Packages | Tests | Current State |
 | --- | --- | --- | --- | --- |
-| OmpAgent implementation | `specs/agents/oh-my-pi.md` ✅ | `internal/agent/oh-my-pi.go` ✅ | `internal/agent/agent_test.go` ✅ | **Gap: --no-session missing** |
+| OmpAgent implementation | `specs/agents/oh-my-pi.md` ✅ | `internal/agent/oh-my-pi.go` ✅ | `internal/agent/agent_test.go` ✅ | ✅ Complete (--no-session added) |
 | Agent factory | `specs/agents.md` ✅ | `internal/agent/agent.go` ✅ | `internal/agent/agent_test.go` ✅ | ✅ Complete |
 | Agent runner | N/A | `internal/agent/runner.go` ✅ | `internal/agent/runner_internal_test.go` ✅ | ✅ Complete |
 | Environment overrides | `specs/agent-env-overrides.md` ✅ | `internal/agent/runner.go` ✅ | `test/e2e/agent_env_overrides_test.go` ✅ | ✅ Complete |
-| E2E agent selection | `specs/agents.md` ✅ | N/A | `test/e2e/agent_selection_test.go` | ⚠️ No omp e2e test |
-| Documentation | `specs/agents/oh-my-pi.md` ✅ | N/A | N/A | ✅ Updated with --no-session |
+| E2E agent selection | `specs/agents.md` ✅ | N/A | `test/e2e/agent_selection_test.go` ✅ | ✅ Complete (omp e2e test added) |
+| Documentation | `specs/agents/oh-my-pi.md` ✅ | N/A | N/A | ✅ Complete |
 
 ## Analysis Summary
 
@@ -43,40 +43,31 @@
 6. **Environment overrides** - `test/e2e/agent_env_overrides_test.go`
    - E2E test for custom environment variable passing
 
-### Identified Gap [ ]
+### Implementation History ✅
 
-**The spec (updated 2026-06-18 19:10) includes `--no-session` flag, but the implementation does not:**
+**Completed 2026-06-18:**
 
-- **Spec (line 80):** `Build args: --print, --no-title, --no-session, optional --model <model>, <prompt>`
-- **Spec (line 129):** `omp --print --no-title --no-session [--model <model>] <prompt>`
-- **Spec (line 132):** "The `--no-session` flag is always included to ensure ephemeral execution without saving session history or using memory/skills from previous sessions."
-- **Code (`oh-my-pi.go:17-21`):**
-  ```go
-  args := []string{"--print", "--no-title"}
-  if a.Model != "" {
-      args = append(args, "--model", a.Model)
-  }
-  args = append(args, prompt)
-  ```
+1. **Phase 1: Added `--no-session` flag to OmpAgent.Execute()**
+-   Updated `internal/agent/oh-my-pi.go:17` to include `--no-session`
+-   Updated `internal/agent/agent_test.go:306` test expectation
+-   Verified with `go test ./internal/agent -run TestOmp -count=1 -v`
 
-**Missing:** `--no-session` flag in the `args` slice.
+2. **Phase 2: Added E2E test for omp agent**
+-   Added test case in `test/e2e/agent_selection_test.go`
+-   Verifies `--print`, `--no-title`, `--no-session`, `--model` args
+-   Runs as part of `TestE2EAgentSelection/select_omp_agent`
 
-**Test reflects old behavior:** `TestOmpExecuteAndAvailability` (line 306) expects:
-```go
-if !strings.Contains(result, "omp:--print --no-title --model m4 prompt") {
-```
-This test will fail once `--no-session` is added.
-
-**Additional gaps:**
-- No e2e test for omp agent in `test/e2e/agent_selection_test.go` (only claude, cursor tested)
-- Commit 824e1a7 updated spec only; implementation unchanged
+3. **Phase 3: Verification**
+-   `make lint` - 0 issues
+-   `make test` - full test suite passed
+-   Spec and code synchronized
 
 ## Phased Plan
 
 ### Phase 1: Add --no-session Flag to OmpAgent.Execute()
 
 **Goal:** Add `--no-session` flag to match spec documentation
-**Status:** `[ ]` Not started
+**Status:** ✅ Complete
 **Paths:**
 - `internal/agent/oh-my-pi.go`
 - `internal/agent/agent_test.go`
@@ -103,7 +94,7 @@ This test will fail once `--no-session` is added.
 ### Phase 2: Add E2E Test for Omp Agent
 
 **Goal:** Add end-to-end test for omp agent selection in `test/e2e/agent_selection_test.go`
-**Status:** `[ ]` Not started
+**Status:** ✅ Complete
 **Paths:**
 - `test/e2e/agent_selection_test.go`
 
@@ -124,7 +115,7 @@ This test will fail once `--no-session` is added.
 ### Phase 3: Verification
 
 **Goal:** Ensure implementation matches spec and all tests pass
-**Status:** `[ ]` Not started
+**Status:** ✅ Complete
 **Paths:**
 - `internal/agent/*`
 - `test/e2e/*`
@@ -155,20 +146,23 @@ This test will fail once `--no-session` is added.
 - 2026-06-18: Read `test/e2e/agent_selection_test.go` - confirmed no e2e test for omp agent (only claude, cursor); files touched: `test/e2e/agent_selection_test.go`.
 - 2026-06-18: Read `internal/agent/agent.go` lines 22-39 - confirmed factory returns OmpAgent for both "omp" and "oh-my-pi" names; files touched: `internal/agent/agent.go`.
 - 2026-06-18: Read `internal/agent/runner.go` lines 44-74 - confirmed executeAgentCommand handles streaming and env passing correctly; files touched: `internal/agent/runner.go`.
+- 2026-06-18: `go test ./internal/agent -run TestOmp -count=1 -v` - passed; implementation and test synchronized; files touched: `internal/agent/oh-my-pi.go`, `internal/agent/agent_test.go`.
+- 2026-06-18: `go test ./internal/agent -count=1 -v` - all agent tests passed; files touched: `internal/agent/*_test.go`.
+- 2026-06-18: `make lint` - 0 issues; files touched: linter output.
+- 2026-06-18: `make test` - full test suite passed; files touched: test output.
+- 2026-06-18: Implemented --no-session flag in `internal/agent/oh-my-pi.go`; updated test in `internal/agent/agent_test.go`; tests run: `go test ./internal/agent -count=1` (passed); files touched: `internal/agent/oh-my-pi.go`, `internal/agent/agent_test.go`.
+- 2026-06-18: Added E2E test for omp agent in `test/e2e/agent_selection_test.go`; tests run: `make test-e2e` (passed); files touched: `test/e2e/agent_selection_test.go`.
+- 2026-06-18: Updated `IMPLEMENTATION_PLAN.md` to mark all phases complete; files touched: `IMPLEMENTATION_PLAN.md`.
 
 ## Summary
 
 | Phase | Goal | Status |
 | --- | --- | --- |
-| Phase 1 | Add --no-session flag to OmpAgent.Execute() | `[ ]` Not started |
-| Phase 2 | Add E2E test for omp agent selection | `[ ]` Not started |
-| Phase 3 | Verification (quality gates, e2e) | `[ ]` Not started |
+| Phase 1 | Add --no-session flag to OmpAgent.Execute() | ✅ Complete |
+| Phase 2 | Add E2E test for omp agent selection | ✅ Complete |
+| Phase 3 | Verification (quality gates, e2e) | ✅ Complete |
 
-**Remaining effort:** 
-- Phase 1: 1 flag addition + 1 test update (~5 minutes)
-- Phase 2: 1 e2e test case (~10 minutes)
-- Phase 3: Quality gate runs (~2-3 minutes)
-- **Total:** ~15-20 minutes, 3 files to modify
+**Remaining effort:** None - all phases complete
 
 ## Known Existing Work
 
