@@ -170,30 +170,34 @@ ralph init --force
 
 The generated starter config disables logging by default (log file is empty). Users can enable logging during the interactive questionnaire by providing a log file path. The default prompts directory is set to `.ralph/prompts` so prompt files can live inside the repository.
 
-## Prompt Resolution
+## Creating Custom Prompts
 
-Prompt content is resolved in this order:
+When writing custom prompts (inline via `--prompt` or in prompt files), always include the completion signal so Ralphex knows when the agent is done.
 
-1. `--prompt`
-2. stdin via `ralph -` or `--prompt-file -`
-3. `--prompt-file <path>`
-4. `<prompts-dir>/<prompt>.md`, searched upward from the current directory when `prompts-dir` is relative
-5. Built-in `build` and `plan` prompts
-
-If `prompts-dir` is an absolute path, Ralphex checks that exact path instead of walking parent directories.
-
-Markdown prompt files can include YAML front matter for `model` and `agent-mode` overrides:
-
-```md
----
-model: claude-sonnet-4
-agent-mode: planner
----
-
-Review the repository, compare it against the specs, and update the plan.
+**Inline prompt example:**
+```bash
+ralph --prompt "Review the authentication module and suggest improvements. When done, output: <promise>COMPLETE</promise>"
 ```
 
-Front matter is stripped before the prompt body is sent to the agent.
+**Prompt file example (`prompts/review.md`):**
+```markdown
+Review the authentication module and identify security issues.
+Write tests to cover edge cases.
+When everything is done, output: <promise>COMPLETE</promise>
+```
+
+You can also use the placeholder `<COMPLETION_SIGNAL>` — Ralphex automatically replaces it with `<promise>COMPLETE</promise>` at runtime:
+```markdown
+Implement feature X.
+Write tests for Y.
+When everything is done, output: <COMPLETION_SIGNAL>
+```
+
+For full details on prompt resolution order and front matter, see [Prompt Resolution](#prompt-resolution).
+
+ ## Prompt Resolution
+
+Prompt content is resolved in this order:
 
 For `model` and `agent-mode`, effective precedence is:
 
