@@ -11,11 +11,9 @@ ARGS ?=
 VERSION ?= 0.0.0
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 DATE ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
-
-LDFLAGS := -X github.com/iyaki/specralph/internal/version.Version=$(VERSION) \
-           -X github.com/iyaki/specralph/internal/version.Commit=$(COMMIT) \
-           -X github.com/iyaki/specralph/internal/version.Date=$(DATE)
-
+LDFLAGS := -X github.com/iyaki/specralph/internal/buildversion.Version=$(VERSION) \
+           -X github.com/iyaki/specralph/internal/buildversion.Commit=$(COMMIT) \
+           -X github.com/iyaki/specralph/internal/buildversion.Date=$(DATE)
 # Default target
 all: build
 
