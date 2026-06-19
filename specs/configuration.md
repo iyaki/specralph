@@ -105,7 +105,7 @@ internal/
 ### Command routing interaction
 
 1. Config loading and precedence do not depend on whether invocation is `ralph run ...`, `ralph <prompt> ...` (alias), or an explicit subcommand.
-2. Routing behavior is defined in [specs/run-command.md](run-command.md).
+2. Routing behavior is defined in [commands/run.md](commands/run.md).
 3. Effective precedence remains unchanged: flags > env vars > config file > defaults.
 
 ## APIs

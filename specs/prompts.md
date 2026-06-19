@@ -19,11 +19,12 @@ Status: Implemented
 
 - Defining new prompt types or templates.
 - Editing prompt content beyond what is implemented in code.
+- CLI command behavior (see [commands/prompts.md](commands/prompts.md)).
 
 ### Scope
 
 - In scope: prompt sources, resolution order, default prompt generation.
-- Out of scope: agent execution, config precedence (see configuration spec).
+- Out of scope: agent execution, config precedence (see configuration spec), CLI command UI.
 
 ## Architecture
 
@@ -64,7 +65,7 @@ internal/
 5. If not found, it falls back to built-in prompts for `build` and `plan`.
 6. If no source is valid, it returns an error.
 
-Note: prompt resolution behavior is independent of command routing. Routing and collision rules are defined in [specs/run-command.md](run-command.md).
+Note: prompt resolution behavior is independent of command routing. Routing and collision rules are defined in [commands/run.md](commands/run.md).
 
 ## Data model
 
@@ -194,6 +195,7 @@ When creating custom prompts (inline via `--prompt` or in prompt files), you can
    ```
 
 The tag is case-sensitive and must appear exactly as shown. Ralph will stop after detecting the first occurrence.
+
 ## Appendices
 
 ### Built-in prompt behavior (summary)
@@ -201,9 +203,15 @@ The tag is case-sensitive and must appear exactly as shown. Ralph will stop afte
 - Build prompt:
   - Instructs to study specs and the implementation plan.
   - Requires implementing a single task, validating, updating plan, and committing.
-+  - Injects the completion signal `<promise>COMPLETE</promise>` automatically. See [Completion Signal](#completion-signal) for details on custom prompts.
+  - Injects the completion signal `<promise>COMPLETE</promise>` automatically. See [Completion Signal](#completion-signal) for details on custom prompts.
 
 - Plan prompt:
   - Instructs to generate/update the implementation plan in a structured format.
   - Requires study/gap analysis against specs and code.
-+  - Injects the completion signal `<promise>COMPLETE</promise>` automatically. See [Completion Signal](#completion-signal) for details on custom prompts.
+  - Injects the completion signal `<promise>COMPLETE</promise>` automatically. See [Completion Signal](#completion-signal) for details on custom prompts.
+
+## Related Specifications
+
+- [commands/prompts.md](commands/prompts.md) — CLI `prompts` command for listing and viewing prompts.
+- [commands/run.md](commands/run.md) — Using prompts with the `run` command.
+- [configuration.md](configuration.md) — Configuration fields used in prompt resolution.

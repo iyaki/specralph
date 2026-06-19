@@ -41,7 +41,7 @@ internal/
     run.go
     init.go
 specs/
-  run-command.md
+- commands/run.md
 ```
 
 ### Component diagram (ASCII)

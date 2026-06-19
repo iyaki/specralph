@@ -39,7 +39,7 @@ internal/
     config.go
     writer.go
 specs/
-  init-command.md
+- commands/init.md
 ```
 
 ### Component diagram (ASCII)
