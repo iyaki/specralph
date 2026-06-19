@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/iyaki/ralphex/internal/config"
+	"github.com/iyaki/specralph/internal/config"
 )
 
 const (

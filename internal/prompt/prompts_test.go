@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iyaki/ralphex/internal/config"
-	"github.com/iyaki/ralphex/internal/prompt"
+	"github.com/iyaki/specralph/internal/config"
+	"github.com/iyaki/specralph/internal/prompt"
 )
 
 func TestBuildPromptIncludesConfiguredReferences(t *testing.T) {

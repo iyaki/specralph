@@ -1,16 +1,41 @@
-# Ralphex
+# SpecRalph - Spec-Driven Ralph-Wiggum Loops
 
-Ralphex is a specs-first CLI for running iterative coding loops against external agent CLIs such as OpenCode, Claude Code, and Cursor. It gives you built-in `plan` and `build` prompts, deterministic configuration precedence, and a simple command model that works well in repository-driven workflows.
+[![GitHub Release](https://img.shields.io/github/v/release/iyaki/specralph)](https://github.com/iyaki/specralph/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/iyaki/specralph/quality.yml)](https://github.com/iyaki/specralph/actions)
+[![License](https://img.shields.io/github/license/iyaki/specralph)](LICENSE)
+
+Specralph is a specs-first CLI for running iterative AI coding loops against external agent CLIs such as OpenCode, Claude Code, and Cursor. It gives you built-in `plan` and `build` prompts, deterministic configuration precedence, and a simple command model that works well in repository-driven workflows.
 
 It wraps a supported agent CLI in a repeatable loop: resolve a prompt, run the agent, and repeat until the agent emits `<promise>COMPLETE</promise>` or max iterations is reached. Each pass works against the updated repository, which makes it a good fit for specs, implementation plans, and repository-local prompts.
 
+## What is Specralph?
+
+**Specralph is a spec-driven AI coding automation CLI** that orchestrates iterative development loops with external agent CLIs like Claude Code, OpenCode, Cursor, and Oh My Pi. Built with Go for cross-platform support (Linux, macOS, Windows), and brings the [Ralph Wiggum methodology](https://ghuntley.com/ralph/) to AI-assisted development: define specs, generate implementation plans, and execute automated coding loops until completion.
+
 > [!NOTE]
-> The repository is `iyaki/ralphex`, but the CLI command remains `ralph`.
+> The repository is `iyaki/specralph`, but the CLI command remains `ralph`.
 
 > [!IMPORTANT]
-> Ralphex does not bundle an agent runtime. Install and authenticate a supported agent CLI separately, then make sure its binary is available on your `PATH`.
+> Specralph does not bundle an agent runtime. Install and authenticate a supported agent CLI separately, then make sure its binary is available on your `PATH`.
 
-## Why Ralphex
+## Table of Contents
+
+- [What is Specralph?](#what-is-specralph)
+- [Why Specralph](#why-specralph)
+- [Supported Agents](#supported-agents)
+- [Install](#install)
+- [Quick Start](#quick-start)
+- [Command Model](#command-model)
+- [Creating Custom Prompts](#creating-custom-prompts)
+- [Prompt Resolution](#prompt-resolution)
+- [Configuration](#configuration)
+- [Completion Signal](#completion-signal)
+- [Workflow](#workflow)
+- [Spec Creator Skill](#spec-creator-skill)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Why Specralph
 
 - Runs a repeatable prompt loop until the agent signals completion or max iterations is reached.
 - Supports built-in `build` and `plan` prompts plus inline, stdin, and file-based prompts.
@@ -22,10 +47,10 @@ It wraps a supported agent CLI in a repeatable loop: resolve a prompt, run the a
 
 | Agent | Binary |
 | --- | --- |
-| Oh My Pi | `omp` |
-| OpenCode | `opencode` |
 | Claude Code | `claude` |
+| OpenCode | `opencode` |
 | Cursor | `cursor` |
+| Oh My Pi | `omp` |
 
 **Codex, Copilot, Gemini, and more agents, coming soon**
 
@@ -50,7 +75,7 @@ Requirements:
 - A supported agent CLI in `PATH`
 - Go `1.25` if you are building from source
 
-Prebuilt binaries are published on [GitHub Releases](https://github.com/iyaki/ralphex/releases). The latest release page is https://github.com/iyaki/ralphex/releases/latest.
+Prebuilt binaries are published on [GitHub Releases](https://github.com/iyaki/specralph/releases). The latest release page is https://github.com/iyaki/specralph/releases/latest.
 
 Devcontainer feature:
 
@@ -59,6 +84,7 @@ Devcontainer feature:
 Build from source:
 
 ```bash
+# Clone the repository and then:
 make build
 ./bin/ralph --help
 ./bin/ralph version
@@ -128,7 +154,7 @@ ralph --env HTTP_PROXY=http://127.0.0.1:8080 build
 | Command | Behavior |
 | --- | --- |
 | `ralph` | Equivalent to `ralph run build` |
-| `ralph run [prompt] [scope]` | Explicit loop entrypoint |
+| `ralph run <prompt> [scope]` | Explicit loop entrypoint |
 | `ralph <prompt> [scope]` | Alias to `ralph run <prompt> [scope]` when `<prompt>` is not a subcommand |
 | `ralph prompts list` | List all available built-in and custom prompts |
 | `ralph prompts show <name>` | Display full content of a specific prompt |
@@ -204,7 +230,7 @@ The `prompts list` subcommand displays:
 - Custom Prompts: Any prompt files found in the configured prompts directory with their file paths
 
 This command is useful when you want to:
-- Inspect built-in prompts to understand what instructions Ralphex sends to the agent
+- Inspect built-in prompts to understand what instructions Specralph sends to the agent
 - Review custom prompts before using them
 - Discover available prompts in your repository
 - Debug prompt content without actually running the agent loop
@@ -213,7 +239,7 @@ The full prompt content is displayed exactly as it would be sent to the agent (w
 
 ## Creating Custom Prompts
 
-When writing custom prompts (inline via `--prompt` or in prompt files), always include the completion signal so Ralphex knows when the agent is done.
+When writing custom prompts (inline via `--prompt` or in prompt files), always include the completion signal so Specralph knows when the agent is done.
 
 **Inline prompt example:**
 ```bash
@@ -227,7 +253,7 @@ Write tests to cover edge cases.
 When everything is done, output: <promise>COMPLETE</promise>
 ```
 
-You can also use the placeholder `<COMPLETION_SIGNAL>` — Ralphex automatically replaces it with `<promise>COMPLETE</promise>` at runtime:
+You can also use the placeholder `<COMPLETION_SIGNAL>` — Specralph automatically replaces it with `<promise>COMPLETE</promise>` at runtime:
 ```markdown
 Implement feature X.
 Write tests for Y.
@@ -248,7 +274,7 @@ flags > environment variables > prompt front matter > [prompt-overrides.<prompt>
 
 ## Configuration
 
-Ralphex resolves settings with this precedence:
+Specralph resolves settings with this precedence:
 
 ```text
 flags > environment variables > config file > defaults
@@ -315,7 +341,7 @@ If `prompts-dir` is unset everywhere, the runtime default is `$HOME/.ralph`. The
 
 ### Child Agent Environment
 
-Ralphex's own `RALPH_*` settings are separate from the environment passed to the child agent. Use `[env]` in config for shared values and repeatable `--env KEY=VALUE` flags for per-run overrides.
+Specralph's own `RALPH_*` settings are separate from the environment passed to the child agent. Use `[env]` in config for shared values and repeatable `--env KEY=VALUE` flags for per-run overrides.
 
 Child agent environment precedence is:
 
@@ -377,7 +403,7 @@ The tag is case-sensitive and must appear exactly as shown. Ralph will stop afte
 
 ## Workflow
 
-Ralphex is designed around a specs-first loop inspired by Geoffrey Huntley's [Ralph methodology](https://ghuntley.com/ralph/).
+Specralph is designed around a specs-first loop inspired by Geoffrey Huntley's [Ralph methodology](https://ghuntley.com/ralph/).
 
 Typical flow:
 
@@ -386,7 +412,7 @@ Typical flow:
 3. Run `ralph` or `ralph build` to implement the next task.
 4. Repeat until the agent returns the completion signal.
 
-The built-in prompts use a `<COMPLETION_SIGNAL>` placeholder, which Ralphex replaces with `<promise>COMPLETE</promise>` before sending the prompt to the agent.
+The built-in prompts use a `<COMPLETION_SIGNAL>` placeholder, which Specralph replaces with `<promise>COMPLETE</promise>` before sending the prompt to the agent.
 
 ## Spec Creator Skill
 
@@ -395,7 +421,7 @@ This repo includes the `spec-creator` [skill](https://agentskills.io/home) (see 
 To install it using Vercel's skills CLI, run:
 
 ```sh
-npx skills add https://github.com/iyaki/ralphex/ --skill spec-creator
+npx skills add https://github.com/iyaki/specralph/ --skill spec-creator
 ```
 
 ## Contributing

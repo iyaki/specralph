@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iyaki/ralphex/internal/cli"
+	"github.com/iyaki/specralph/internal/cli"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +38,7 @@ func TestExecuteInitCommand_FullSuccessPath(t *testing.T) {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		t.Fatal("config file should exist")
 	}
-	if !strings.Contains(output.String(), "Initialized Ralphex configuration") {
+	if !strings.Contains(output.String(), "Initialized Specralph configuration") {
 		t.Error("expected success message")
 	}
 }

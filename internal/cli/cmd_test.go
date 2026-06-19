@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iyaki/ralphex/internal/cli"
-	"github.com/iyaki/ralphex/internal/config"
+	"github.com/iyaki/specralph/internal/cli"
+	"github.com/iyaki/specralph/internal/config"
 )
 
 func writeExecutable(t *testing.T, dir, name, content string) string {
@@ -26,14 +26,14 @@ func TestNewRalphCommandBasicProperties(t *testing.T) {
 	if cmd.Use != "ralph [options] [prompt] [scope]" {
 		t.Fatalf("unexpected use string: %q", cmd.Use)
 	}
-	if !strings.Contains(cmd.Long, "Ralphex") {
-		t.Fatalf("expected long help to mention Ralphex, got %q", cmd.Long)
+	if !strings.Contains(cmd.Long, "Specralph") {
+		t.Fatalf("expected long help to mention Specralph, got %q", cmd.Long)
 	}
 	if !strings.Contains(cmd.Long, "Ralph-Wiggum inspired spec-driven agent runner") {
 		t.Fatalf("expected long help to include the new subtitle, got %q", cmd.Long)
 	}
-	if !strings.Contains(cmd.Long, "https://github.com/iyaki/ralphex") {
-		t.Fatalf("expected long help to point to the ralphex repo, got %q", cmd.Long)
+	if !strings.Contains(cmd.Long, "https://github.com/iyaki/specralph") {
+		t.Fatalf("expected long help to point to the specralph repo, got %q", cmd.Long)
 	}
 	if cmd.Flags().Lookup("max-iterations") == nil {
 		t.Fatal("expected max-iterations flag to exist")
@@ -110,7 +110,7 @@ func TestRunLoopCompletesOnSignal(t *testing.T) {
 	}
 
 	output := out.String()
-	if !strings.Contains(output, "Starting Ralphex - Max iterations: 3") {
+	if !strings.Contains(output, "Starting Specralph - Max iterations: 3") {
 		t.Fatalf("expected branded startup message, got %q", output)
 	}
 	if !strings.Contains(output, "All planned tasks completed!") {

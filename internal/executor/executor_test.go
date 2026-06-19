@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iyaki/ralphex/internal/executor"
+	"github.com/iyaki/specralph/internal/executor"
 )
 
 type synchronizedBuffer struct {

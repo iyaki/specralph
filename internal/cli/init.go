@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/iyaki/ralphex/internal/config"
+	"github.com/iyaki/specralph/internal/config"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -194,7 +194,7 @@ func NewInitCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Initialize Ralphex configuration",
+		Short: "Initialize Specralph configuration",
 		Long:  `Interactive command to generate a ralph.toml configuration file.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return executeInitCommand(cmd, output, force)
@@ -237,7 +237,7 @@ func executeInitCommand(cmd *cobra.Command, outputPath string, force bool) error
 		return err
 	}
 
-	_, _ = fmt.Fprintf(session.Writer, "Initialized Ralphex configuration at %s\n", session.OutputPath)
+	_, _ = fmt.Fprintf(session.Writer, "Initialized Specralph configuration at %s\n", session.OutputPath)
 	if err := printInitSuccessGuidance(session); err != nil {
 		return err
 	}
