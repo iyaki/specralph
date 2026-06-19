@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/iyaki/ralphex/internal/config"
-	"github.com/iyaki/ralphex/internal/prompt"
+	"github.com/iyaki/specralph/internal/config"
+	"github.com/iyaki/specralph/internal/prompt"
 )
 
 // NewPromptsCommand creates the prompts command for listing and viewing prompts.

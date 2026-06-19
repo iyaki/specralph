@@ -1,4 +1,4 @@
-# Ralphex Specifications
+# Specralph Specifications
 
 Design docs and technical specifications
 

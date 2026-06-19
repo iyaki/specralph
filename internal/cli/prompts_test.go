@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iyaki/ralphex/internal/cli"
+	"github.com/iyaki/specralph/internal/cli"
 )
 
 func TestNewPromptsCommandBasicProperties(t *testing.T) {
@@ -187,7 +187,6 @@ func testPromptsShow(t *testing.T, promptName, expectedHeader string) {
 		t.Errorf("expected output to mention implementation plan, got %q", output)
 	}
 }
-
 
 func TestPromptsShowNonExistent(t *testing.T) {
 	wd, err := os.Getwd()

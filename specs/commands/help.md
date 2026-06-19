@@ -31,7 +31,7 @@ None. The command accepts no flags.
 **Root help:**
 ```bash
 $ ralph help
-Ralphex is a POSIX-compliant AI agentic loop shell runner.
+Specralph is a POSIX-compliant AI agentic loop shell runner.
 
 Usage:
   ralph [options] [prompt] [scope] [flags]
@@ -45,7 +45,7 @@ Examples:
 Available Commands:
   completion  Generate the autocompletion script for the specified shell
   help        Help about any command
-  init        Initialize Ralphex configuration
+  init        Initialize Specralph configuration
   prompts     List available prompts
   run         Run a prompt loop
   version     Print the version number of Ralph CLI
@@ -63,7 +63,7 @@ Use "ralph [command] --help" for more information about a command.
 **Command-specific help:**
 ```bash
 $ ralph help init
-Initialize Ralphex configuration by creating a toml config file.
+Initialize Specralph configuration by creating a toml config file.
 
 Usage:
   ralph init [flags]
@@ -83,7 +83,7 @@ Examples:
 
 ### Root help shows:
 
-1. **Brief description** — One paragraph explaining what Ralphex does
+1. **Brief description** — One paragraph explaining what Specralph does
 2. **Usage pattern** — Shows both flag-based and command-based invocation
 3. **Examples** — 3-5 common invocations (build, plan, custom prompt)
 4. **Available commands** — Auto-discovered from registered subcommands

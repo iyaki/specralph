@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iyaki/ralphex/internal/cli"
-	"github.com/iyaki/ralphex/internal/config"
+	"github.com/iyaki/specralph/internal/cli"
+	"github.com/iyaki/specralph/internal/config"
 )
 
 func TestNewRunCommandBasicProperties(t *testing.T) {

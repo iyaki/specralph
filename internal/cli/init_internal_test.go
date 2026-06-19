@@ -185,7 +185,7 @@ func TestInitCommandPreviewDeclinedSkipsWrite(t *testing.T) {
 		"Initialization cancelled; configuration was not written.",
 	})
 
-	if strings.Contains(output, "Initialized Ralphex configuration") {
+	if strings.Contains(output, "Initialized Specralph configuration") {
 		t.Fatalf("expected no success output when preview confirmation is declined, got %q", output)
 	}
 }
@@ -249,7 +249,7 @@ func TestInitCommandDeclinedOverwriteLeavesExistingFileUnchanged(t *testing.T) {
 	if !strings.Contains(output, "Initialization cancelled; existing configuration was not changed.") {
 		t.Fatalf("expected declined overwrite cancellation message, got %q", output)
 	}
-	if strings.Contains(output, "Initialized Ralphex configuration") {
+	if strings.Contains(output, "Initialized Specralph configuration") {
 		t.Fatalf("expected no success message when overwrite is declined, got %q", output)
 	}
 }
@@ -283,7 +283,7 @@ func TestInitCommandConfirmedOverwriteRewritesExistingFile(t *testing.T) {
 		t.Fatalf("expected overwritten config to seed defaults from existing valid values, got %q", updatedText)
 	}
 
-	if !strings.Contains(out.String(), "Initialized Ralphex configuration") {
+	if !strings.Contains(out.String(), "Initialized Specralph configuration") {
 		t.Fatalf("expected success output after confirmed overwrite, got %q", out.String())
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/iyaki/ralphex/internal/cli"
+	"github.com/iyaki/specralph/internal/cli"
 )
 
 func main() {

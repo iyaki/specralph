@@ -3,7 +3,7 @@ package cli_test
 import (
 	"testing"
 
-	"github.com/iyaki/ralphex/internal/cli"
+	"github.com/iyaki/specralph/internal/cli"
 )
 
 func TestInitCommandStructure(t *testing.T) {
@@ -13,8 +13,8 @@ func TestInitCommandStructure(t *testing.T) {
 		t.Errorf("expected Use 'init', got %s", cmd.Use)
 	}
 
-	if cmd.Short != "Initialize Ralphex configuration" {
-		t.Errorf("expected Short 'Initialize Ralphex configuration', got %s", cmd.Short)
+	if cmd.Short != "Initialize Specralph configuration" {
+		t.Errorf("expected Short 'Initialize Specralph configuration', got %s", cmd.Short)
 	}
 
 	// Check flags

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iyaki/ralphex/internal/cli"
+	"github.com/iyaki/specralph/internal/cli"
 )
 
 func TestNewVersionCommandBasicProperties(t *testing.T) {

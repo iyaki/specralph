@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/iyaki/ralphex/internal/buildversion"
+	"github.com/iyaki/specralph/internal/buildversion"
 )
 
 // NewVersionCommand creates the version subcommand.

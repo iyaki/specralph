@@ -110,7 +110,7 @@ func TestE2EConfigByPromptInvalidFrontMatterFailsBeforeAgentRun(t *testing.T) {
 		},
 		ForbiddenOutput: []string{
 			"[ralph-test-agent] Starting",
-			"Starting Ralphex - Max iterations",
+			"Starting Specralph - Max iterations",
 		},
 	})
 }

@@ -116,7 +116,7 @@ func TestE2ELogging(t *testing.T) {
 		},
 		ExpectedFileContent: map[string][]string{
 			"ralph.log": {
-				"===== Ralphex run started at",
+				"===== Specralph run started at",
 			},
 		},
 	}

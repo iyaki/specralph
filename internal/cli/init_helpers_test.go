@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/iyaki/ralphex/internal/config"
+	"github.com/iyaki/specralph/internal/config"
 )
 
 func TestBuildInitPreviewLines(t *testing.T) {

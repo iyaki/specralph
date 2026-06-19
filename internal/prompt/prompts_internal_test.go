@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/iyaki/ralphex/internal/config"
+	"github.com/iyaki/specralph/internal/config"
 )
 
 type Config = config.Config

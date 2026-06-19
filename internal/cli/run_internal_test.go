@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/iyaki/ralphex/internal/config"
+	"github.com/iyaki/specralph/internal/config"
 	"github.com/spf13/cobra"
 )
 

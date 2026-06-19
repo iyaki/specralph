@@ -1,4 +1,4 @@
-# Contributing to Ralphex
+# Contributing to SpecRalph
 
 Thanks for your interest in contributing.
 
@@ -43,7 +43,7 @@ make help
 
 ## Specs-First Workflow
 
-Ralphex is built around intentional specs and deterministic behavior.
+SpecRalph is built around intentional specs and deterministic behavior.
 
 1. Start with `specs/README.md` and read the relevant specs for your change.
 2. Treat specs as the source of intent, then verify actual behavior in code and tests.

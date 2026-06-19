@@ -10,15 +10,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/iyaki/ralphex/internal/agent"
-	"github.com/iyaki/ralphex/internal/config"
-	"github.com/iyaki/ralphex/internal/logger"
-	"github.com/iyaki/ralphex/internal/prompt"
+	"github.com/iyaki/specralph/internal/agent"
+	"github.com/iyaki/specralph/internal/config"
+	"github.com/iyaki/specralph/internal/logger"
+	"github.com/iyaki/specralph/internal/prompt"
 )
 
 var envFlagKeyPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
-// NewRunCommand creates the run command for Ralphex.
+// NewRunCommand creates the run command for Specralph.
 func NewRunCommand() *cobra.Command {
 	var cfg config.Config
 
@@ -204,7 +204,7 @@ func applyAgentModeSettings(
 	}
 }
 
-// RunLoop executes the main Ralphex iteration loop.
+// RunLoop executes the main Specralph iteration loop.
 func RunLoop(cfg *config.Config, promptText, promptName string, output io.Writer) error {
 	completionSignal := "<promise>COMPLETE</promise>"
 	writef := func(format string, args ...any) {
@@ -233,7 +233,7 @@ func RunLoop(cfg *config.Config, promptText, promptName string, output io.Writer
 		writef("Warning: %s agent not found in PATH, will continue anyway...\n", agentInstance.Name())
 	}
 
-	writef("Starting Ralphex - Max iterations: %d\n", cfg.MaxIterations)
+	writef("Starting Specralph - Max iterations: %d\n", cfg.MaxIterations)
 	writef("Using agent: %s\n", agentInstance.Name())
 
 	for i := 1; i <= cfg.MaxIterations; i++ {

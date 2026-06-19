@@ -1,22 +1,22 @@
-// Package cli provides CLI commands and execution flow for Ralphex.
+// Package cli provides CLI commands and execution flow for Specralph.
 package cli
 
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/iyaki/ralphex/internal/config"
+	"github.com/iyaki/specralph/internal/config"
 )
 
 const maxPositionalArgs = 2
 
-// NewRalphCommand creates the root command for Ralphex.
+// NewRalphCommand creates the root command for Specralph.
 func NewRalphCommand() *cobra.Command {
 	var cfg config.Config
 
 	cmd := &cobra.Command{
 		Use:   "ralph [options] [prompt] [scope]",
 		Short: "POSIX-compliant AI Agentic Loop runner for spec-driven development",
-		Long: `Ralphex is a POSIX-compliant AI agentic loop shell runner.
+		Long: `Specralph is a POSIX-compliant AI agentic loop shell runner.
 It is a Ralph-Wiggum inspired spec-driven agent runner.
 It loads prompts from files (with optional inline overrides) and comes with build/plan presets.
 
@@ -27,7 +27,7 @@ Custom Prompt Example:
   ralph --prompt "Implement feature X. When done, output <promise>COMPLETE</promise>"
   ralph --prompt "Task X, Y and Z. Output <COMPLETION_SIGNAL> when everything is done"
 
-For extended documentation, examples, and configuration options, visit https://github.com/iyaki/ralphex.`,
+For extended documentation, examples, and configuration options, visit https://github.com/iyaki/specralph.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Example: `  ralph build

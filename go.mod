@@ -1,4 +1,4 @@
-module github.com/iyaki/ralphex
+module github.com/iyaki/specralph
 
 go 1.25.0
 
