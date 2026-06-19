@@ -77,31 +77,36 @@ Requirements:
 
 Prebuilt binaries are published on [GitHub Releases](https://github.com/iyaki/specralph/releases). The latest release page is https://github.com/iyaki/specralph/releases/latest.
 
-Devcontainer feature:
+## Quick Install (Recommended)
+
+### One-line install (Linux/macOS)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/iyaki/specralph/main/scripts/install.sh | bash
+```
+
+### Manual download
+
+1. Visit [GitHub Releases](https://github.com/iyaki/specralph/releases/latest)
+2. Download the binary for your platform
+3. Move to your PATH:
+   ```bash
+   chmod +x ralph
+   sudo mv ralph /usr/local/bin/
+   ```
+
+### Devcontainer feature:
 
 `ghcr.io/iyaki/devcontainer-features/ralph:1`
 
-Build from source:
+### Build from source
+
 
 ```bash
 # Clone the repository and then:
 make build
 ./bin/ralph --help
 ./bin/ralph version
-```
-
-Build with custom version:
-
-```bash
-make build VERSION=1.2.3
-./bin/ralph version
-# ralph v1.2.3
-```
-
-Run directly from source without building:
-
-```bash
-make run ARGS='--help'
 ```
 
 Install system-wide after building:
