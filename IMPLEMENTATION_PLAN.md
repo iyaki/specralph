@@ -1,179 +1,263 @@
-# Implementation Plan (Oh My Pi Agent)
+# Implementation Plan (commands/help)
 
-**Status:** ✅ Complete (Phase 1 implemented and tested)
-**Last Updated:** 2026-06-18
-**Primary Specs:** `specs/agents/oh-my-pi.md`, `specs/agents.md`
+**Status:** Help Command Complete (Cobra auto-provided), Prompts Command Partially Complete (1/2)
+**Last Updated:** 2026-06-19
+**Primary Spec:** [specs/commands/help.md](specs/commands/help.md), [specs/commands/prompts.md](specs/commands/prompts.md)
+
+---
 
 ## Quick Reference
 
-| System/Subsystem | Specs | Modules/Packages | Tests | Current State |
-| --- | --- | --- | --- | --- |
-| OmpAgent implementation | `specs/agents/oh-my-pi.md` ✅ | `internal/agent/oh-my-pi.go` ✅ | `internal/agent/agent_test.go` ✅ | ✅ Complete (--no-session added) |
-| Agent factory | `specs/agents.md` ✅ | `internal/agent/agent.go` ✅ | `internal/agent/agent_test.go` ✅ | ✅ Complete |
-| Agent runner | N/A | `internal/agent/runner.go` ✅ | `internal/agent/runner_internal_test.go` ✅ | ✅ Complete |
-| Environment overrides | `specs/agent-env-overrides.md` ✅ | `internal/agent/runner.go` ✅ | `test/e2e/agent_env_overrides_test.go` ✅ | ✅ Complete |
-| E2E agent selection | `specs/agents.md` ✅ | N/A | `test/e2e/agent_selection_test.go` ✅ | ✅ Complete (omp e2e test added) |
-| Documentation | `specs/agents/oh-my-pi.md` ✅ | N/A | N/A | ✅ Complete |
+| System/Module          | Spec                                    | Module/Package      | Status     |
+|------------------------|-----------------------------------------|---------------------|------------|
+| Help Command           | [specs/commands/help.md](specs/commands/help.md) | `internal/cli/cmd.go` | ✅ Complete |
+| Prompts Command        | [specs/commands/prompts.md](specs/commands/prompts.md) | `internal/cli/prompts.go` | ⚠️ Partial  |
+| Run Command (default)  | [specs/commands/run.md](specs/commands/run.md)     | `internal/cli/run.go` | ✅ Complete |
+| Init Command           | [specs/commands/init.md](specs/commands/init.md)   | `internal/cli/init.go` | ✅ Complete |
+| Version Command        | [specs/commands/version.md](specs/commands/version.md) | `internal/cli/version.go` | ✅ Complete |
+| Completion Command     | Auto (Cobra)                            | N/A                 | ✅ Complete |
 
-## Analysis Summary
+**Registered Commands** (from `internal/cli/cmd.go`):
+- `init` ✅
+- `run` ✅
+- `version` ✅
+- `help` ✅ (Cobra auto)
+- `completion` ✅ (Cobra auto)
+- `prompts` ⚠️ **PARTIAL** (list only, show missing)
 
-### What Already Exists ✅
-
-1. **OmpAgent struct** - `internal/agent/oh-my-pi.go` implements the `Agent` interface
-   - Fields: `Model`, `AgentMode`, `Env`
-   - Methods: `Execute()`, `Name()`, `IsAvailable()`
-
-2. **Agent factory integration** - `internal/agent/agent.go:26-29`
-   - Returns `OmpAgent` for both `"omp"` and `"oh-my-pi"` agent names
-   - Passes environment snapshot to agent
-
-3. **Test coverage** - `internal/agent/agent_test.go`
-   - `TestOmpExecuteAndAvailability` - verifies command args and availability check
-   - `TestOmpExecuteStreamsOutputInRealTime` - verifies streaming behavior
-   - `TestAllAgentsExecuteWithProvidedEnvironment` - verifies env passing
-
-4. **Documentation** - `specs/agents/oh-my-pi.md` (updated 2026-06-18)
-   - Added `--no-session` flag to invocation docs
-   - Explains ephemeral execution rationale
-
-5. **Agent runner** - `internal/agent/runner.go`
-   - `executeAgentCommand` handles streaming, env passing, error handling
-   - `BuildEffectiveEnv` for environment variable management
-
-6. **Environment overrides** - `test/e2e/agent_env_overrides_test.go`
-   - E2E test for custom environment variable passing
-
-### Implementation History ✅
-
-**Completed 2026-06-18:**
-
-1. **Phase 1: Added `--no-session` flag to OmpAgent.Execute()**
--   Updated `internal/agent/oh-my-pi.go:17` to include `--no-session`
--   Updated `internal/agent/agent_test.go:306` test expectation
--   Verified with `go test ./internal/agent -run TestOmp -count=1 -v`
-
-2. **Phase 2: Added E2E test for omp agent**
--   Added test case in `test/e2e/agent_selection_test.go`
--   Verifies `--print`, `--no-title`, `--no-session`, `--model` args
--   Runs as part of `TestE2EAgentSelection/select_omp_agent`
-
-3. **Phase 3: Verification**
--   `make lint` - 0 issues
--   `make test` - full test suite passed
--   Spec and code synchronized
+---
 
 ## Phased Plan
 
-### Phase 1: Add --no-session Flag to OmpAgent.Execute()
+### Phase 1: Help Command Verification (Complete)
 
-**Goal:** Add `--no-session` flag to match spec documentation
+**Goal:** Verify Cobra-provided help command meets spec requirements
+
 **Status:** ✅ Complete
+
 **Paths:**
-- `internal/agent/oh-my-pi.go`
-- `internal/agent/agent_test.go`
+- `internal/cli/cmd.go`
+- `internal/cli/run.go`
 
 **Checklist:**
-- `[ ]` Add `--no-session` to args slice in `oh-my-pi.go:17`
-- `[ ]` Update test expectation in `agent_test.go:306` to include `--no-session`
-- `[ ]` Verify both `"omp"` and `"oh-my-pi"` agent names work
+- [x] `ralph help` outputs root help
+- [x] `ralph help <command>` outputs command-specific help
+- [x] `ralph --help` equivalent to `ralph help`
+- [x] `ralph <command> --help` equivalent to `ralph help <command>`
+- [x] Unknown commands return error: `unknown command "<name>" for "ralph"`
+- [x] Help output includes Usage, Available Commands, Flags sections
+- [x] Examples shown in root help (build, plan, custom prompt)
+- [x] `prompts` command appears in Available Commands list ✅ (verified 2026-06-19)
 
 **Definition of Done:**
-- `[ ]` `go test ./internal/agent -run TestOmp -count=1` passes
-- `[ ]` `make lint` passes
-- `[ ]` Manual verification: args include `--no-session`
-- Files touched: `internal/agent/oh-my-pi.go`, `internal/agent/agent_test.go`
+- All Cobra default help behaviors verified working
+- No custom implementation needed per spec
 
-**Risks/Dependencies:**
-- None - straightforward flag addition
-- Test must be updated to match new expected args
+**Risks/Dependencies:** None - fully functional
 
-**Reference Pattern:**
-- See `internal/agent/claude.go` or `internal/agent/cursor.go` for similar flag-building patterns
-- Current implementation at `internal/agent/oh-my-pi.go:17-21`
+---
 
-### Phase 2: Add E2E Test for Omp Agent
+### Phase 2: Prompts Command - List Subcommand (Complete)
 
-**Goal:** Add end-to-end test for omp agent selection in `test/e2e/agent_selection_test.go`
+**Goal:** Implement `prompts list` subcommand to discover and display available prompts
+
 **Status:** ✅ Complete
+
 **Paths:**
-- `test/e2e/agent_selection_test.go`
+- `internal/cli/prompts.go` (exists)
+- `internal/prompt/prompts.go` (supports built-in prompts)
 
 **Checklist:**
-- `[ ]` Add test case for `--agent omp`
-- `[ ]` Verify args include `--print`, `--no-title`, `--no-session`
-- `[ ]` Verify model argument passing with `--model`
+- [x] Create `internal/cli/prompts.go` with `NewPromptsCommand()`
+- [x] Implement `prompts list` subcommand
+- [x] Discover built-in prompts (build, plan)
+- [x] Output formatted list with Name, Description
+- [x] Show usage hint: "Use 'ralph run <prompt-name>' to execute"
+- [x] Command registered in `internal/cli/cmd.go`
+- [x] Tests pass
+
+**Verified:**
+```bash
+$ ralph prompts list
+Built-in Prompts:
+  build      Implement a single task from IMPLEMENTATION_PLAN.md after studying specs,
+             then validate, commit, and update the plan.
+  plan       Generate or update IMPLEMENTATION_PLAN.md with a phase-based plan after
+             studying specs, existing code, and identifying gaps.
+
+Use 'ralph run <prompt-name>' to execute a prompt.
+```
 
 **Definition of Done:**
-- `[ ]` `make test-e2e` passes with new omp test
-- `[ ]` Test mirrors structure of claude/cursor tests
-- Files touched: `test/e2e/agent_selection_test.go`
+- `prompts list` shows built-in prompts ✅
+- `prompts` command appears in help output ✅
 
-**Risks/Dependencies:**
-- Requires `ralph-test-agent` mock to handle omp-style args
-- May need to update `test/e2e/agents/ralph-test-agent/main.go`
+**Risks/Dependencies:** None - functional
 
-### Phase 3: Verification
+---
 
-**Goal:** Ensure implementation matches spec and all tests pass
-**Status:** ✅ Complete
+### Phase 3: Prompts Command - Show Subcommand (Missing)
+
+**Goal:** Implement `prompts show <name>` subcommand to display full prompt content
+
+**Status:** ❌ Not Started
+
 **Paths:**
-- `internal/agent/*`
-- `test/e2e/*`
-- `specs/agents/oh-my-pi.md`
-
-#### 3.1 Run Quality Gates
+- `internal/cli/prompts.go` (add `show` subcommand)
+- `internal/prompt/prompts.go` (may need content retrieval function)
+- `internal/cli/prompts_test.go` (new test file)
 
 **Checklist:**
-- `[ ]` `make quality` passes (lint, test, security, arch)
-- `[ ]` `make test` passes (full test suite including e2e)
-- `[ ]` `make test-e2e` passes
-- `[ ]` Verify no other references to omp args need updating
+- [ ] Add `show` subcommand to `internal/cli/prompts.go`
+- [ ] Implement `prompts show build` - outputs full built-in build prompt
+- [ ] Implement `prompts show plan` - outputs full built-in plan prompt
+- [ ] Implement `prompts show <custom>` - outputs custom prompt file content (frontmatter stripped)
+- [ ] Implement error handling for nonexistent prompts
+- [ ] Write tests in `prompts_test.go`
+- [ ] Verify exit codes: 0 on success, non-zero on error
+
+**Current Gap:**
+```bash
+$ ralph prompts show build
+Error: accepts at most 2 arg(s), received 3  # ❌ Subcommand not implemented
+```
 
 **Definition of Done:**
-- `[ ]` All CI gates pass
-- `[ ]` Spec and code are synchronized
-- Files touched: test files as needed
+- `prompts show build` outputs full build prompt content
+- `prompts show plan` outputs full plan prompt content
+- `prompts show nonexistent` returns error with non-zero exit code
+- Tests pass with coverage ≥95%
 
 **Risks/Dependencies:**
-- E2E tests may reveal additional gaps
+- Need to ensure prompt content generation functions are accessible from CLI layer
+
+---
 
 ## Verification Log
 
-- 2026-06-18: Read `specs/agents/oh-my-pi.md` - confirmed spec includes `--no-session` flag (commit 824e1a7, 2026-06-18 19:10); tests run: none; files touched: `specs/agents/oh-my-pi.md`.
-- 2026-06-18: Read `internal/agent/oh-my-pi.go` lines 1-35 - confirmed implementation missing `--no-session` flag; tests run: none; files touched: `internal/agent/oh-my-pi.go`.
-- 2026-06-18: Read `internal/agent/agent_test.go` lines 289-314 - confirmed test expects old args without `--no-session`; tests run: `go test ./internal/agent -run TestOmp` (passes with current code); files touched: `internal/agent/agent_test.go`.
-- 2026-06-18: Git history analysis - commit 824e1a7 updated spec to include `--no-session` but implementation was not updated; files touched: git log output.
-- 2026-06-18: Read `test/e2e/agent_selection_test.go` - confirmed no e2e test for omp agent (only claude, cursor); files touched: `test/e2e/agent_selection_test.go`.
-- 2026-06-18: Read `internal/agent/agent.go` lines 22-39 - confirmed factory returns OmpAgent for both "omp" and "oh-my-pi" names; files touched: `internal/agent/agent.go`.
-- 2026-06-18: Read `internal/agent/runner.go` lines 44-74 - confirmed executeAgentCommand handles streaming and env passing correctly; files touched: `internal/agent/runner.go`.
-- 2026-06-18: `go test ./internal/agent -run TestOmp -count=1 -v` - passed; implementation and test synchronized; files touched: `internal/agent/oh-my-pi.go`, `internal/agent/agent_test.go`.
-- 2026-06-18: `go test ./internal/agent -count=1 -v` - all agent tests passed; files touched: `internal/agent/*_test.go`.
-- 2026-06-18: `make lint` - 0 issues; files touched: linter output.
-- 2026-06-18: `make test` - full test suite passed; files touched: test output.
-- 2026-06-18: Implemented --no-session flag in `internal/agent/oh-my-pi.go`; updated test in `internal/agent/agent_test.go`; tests run: `go test ./internal/agent -count=1` (passed); files touched: `internal/agent/oh-my-pi.go`, `internal/agent/agent_test.go`.
-- 2026-06-18: Added E2E test for omp agent in `test/e2e/agent_selection_test.go`; tests run: `make test-e2e` (passed); files touched: `test/e2e/agent_selection_test.go`.
-- 2026-06-18: Updated `IMPLEMENTATION_PLAN.md` to mark all phases complete; files touched: `IMPLEMENTATION_PLAN.md`.
+### 2026-06-19: Help Command Verification
+
+**Commands Run:**
+- `./bin/ralph --help` ✅ Root help displays correctly
+- `./bin/ralph help` ✅ Equivalent to --help
+- `./bin/ralph help prompts` ✅ Shows prompts command help
+- `./bin/ralph prompts --help` ✅ Shows prompts subcommands
+
+**Results:**
+- ✅ Help command fully functional via Cobra
+- ✅ `prompts` command registered and visible in help
+- ✅ Prompts command structure created with `list` subcommand
+
+**Files Analyzed:**
+- `internal/cli/cmd.go` - Command registration (line 47-49 adds init, run, version)
+- `internal/cli/prompts.go` - New prompts command (implemented)
+- `internal/prompt/prompts.go` - Prompt generation logic
+
+### 2026-06-19: Prompts List Verification
+
+**Commands Run:**
+- `./bin/ralph prompts list` ✅
+
+**Results:**
+- ✅ Built-in prompts (build, plan) displayed with descriptions
+- ✅ Usage hint included ("Use 'ralph run <prompt-name>' to execute")
+- ✅ Command appears in help output under Available Commands
+
+**Bugs Discovered:** None
+
+### 2026-06-19: Prompts Show Gap Identified
+
+**Commands Run:**
+- `./bin/ralph prompts show build` ❌ Error - subcommand not implemented
+- `./bin/ralph prompts show nonexistent` ❌ Error - subcommand not implemented
+
+**Results:**
+- ❌ `show` subcommand NOT implemented
+- ✅ Infrastructure in place (prompts.go exists, prompt functions available)
+
+**Files to Modify:**
+- `internal/cli/prompts.go` - Add show subcommand
+
+### 2026-06-19: Test Suite Verification
+
+**Commands Run:**
+- `make quality` ✅ All tests pass
+
+**Results:**
+- ✅ All existing tests pass
+- ❌ No tests yet for `prompts show` (command doesn't exist)
+- ✅ Existing code coverage maintains ≥95% (spec requirement)
+
+**Files Tested:**
+- `internal/cli/cmd_test.go` - Command structure tests
+- `internal/prompt/prompts_test.go` - Prompt resolution tests
+- `internal/prompt/prompts_internal_test.go` - Internal helper tests
+
+---
 
 ## Summary
 
-| Phase | Goal | Status |
-| --- | --- | --- |
-| Phase 1 | Add --no-session flag to OmpAgent.Execute() | ✅ Complete |
-| Phase 2 | Add E2E test for omp agent selection | ✅ Complete |
-| Phase 3 | Verification (quality gates, e2e) | ✅ Complete |
+| Phase | Description                                | Status      | Completion |
+|-------|--------------------------------------------|-------------|------------|
+| 1     | Help Command Verification                  | ✅ Complete  | 100%       |
+| 2     | Prompts Command - List Subcommand          | ✅ Complete  | 100%       |
+| 3     | Prompts Command - Show Subcommand          | ❌ Pending   | 0%         |
 
-**Remaining effort:** None - all phases complete
+**Remaining Effort:**
+- Phase 3: Prompts Show Subcommand - ~2-3 hours
+  - Add `show` subcommand to prompts.go: 1h
+  - Hook up to existing prompt content functions: 0.5h
+  - Write tests: 1h
+  - Manual verification: 0.5h
+
+---
 
 ## Known Existing Work
 
-- ✅ `OmpAgent` struct and interface implementation complete
-- ✅ Agent factory supports both `"omp"` and `"oh-my-pi"` names
-- ✅ Test coverage for execution, availability, streaming, and environment passing
-- ✅ Spec documentation updated with `--no-session` flag rationale
-- ✅ Environment snapshot and override mechanism in `runner.go`
-- ✅ E2E test framework for agent selection (claude, cursor examples exist)
-- ✅ Agent environment overrides E2E test complete
+**Help Command:**
+- Fully provided by Cobra framework (no custom code needed)
+- Registered automatically when commands are added via `cmd.AddCommand()`
+- Output format controlled by Cobra's help template system
+
+**Prompts Command:**
+- `internal/cli/prompts.go` exists with `prompts list` implementation
+- `prompts list` discovers built-in prompts from `internal/prompt` package
+- Command registered in `internal/cli/cmd.go` (verified via `ralph --help`)
+
+**Registered Commands:**
+- `init` - Interactive config setup (implemented)
+- `run` - Prompt loop execution (implemented)
+- `version` - Version info output (implemented)
+- `completion` - Shell completion scripts (Cobra auto-generated)
+- `prompts` - Prompt discovery (list ✅, show ❌)
+
+**Prompt Infrastructure:**
+- `internal/prompt/prompts.go` has `BuildPrompt()` and `PlanPrompt()` functions
+- Built-in prompts (build, plan) already generated by these functions
+- `GetPrompt()` function handles prompt resolution from multiple sources
+
+---
 
 ## Manual Deployment Tasks
 
-None
+None.
+
+---
+
+## Next Actions
+
+1. **Implement `prompts show <name>` subcommand** (Phase 3)
+   - Add subcommand handler in `internal/cli/prompts.go`
+   - Resolve prompt name (built-in vs custom)
+   - Output full content (frontmatter stripped for custom)
+   - Add error handling
+
+2. **Write comprehensive tests**
+   - Test built-in prompts (show build, show plan)
+   - Test custom prompts (show with frontmatter, without)
+   - Test error cases (nonexistent prompt, permission denied)
+
+3. **Verify end-to-end**
+   - Manual testing of all subcommands
+   - Verify help output includes examples
+   - Run `make quality` for full test suite + coverage
