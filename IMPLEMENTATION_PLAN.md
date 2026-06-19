@@ -1,6 +1,6 @@
 # Implementation Plan (commands/help)
 
-**Status:** Help Command Complete (Cobra auto-provided), Prompts Command Partially Complete (1/2)
+**Status:** Prompts Command Complete (List + Show)
 **Last Updated:** 2026-06-19
 **Primary Spec:** [specs/commands/help.md](specs/commands/help.md), [specs/commands/prompts.md](specs/commands/prompts.md)
 
@@ -11,7 +11,7 @@
 | System/Module          | Spec                                    | Module/Package      | Status     |
 |------------------------|-----------------------------------------|---------------------|------------|
 | Help Command           | [specs/commands/help.md](specs/commands/help.md) | `internal/cli/cmd.go` | ✅ Complete |
-| Prompts Command        | [specs/commands/prompts.md](specs/commands/prompts.md) | `internal/cli/prompts.go` | ⚠️ Partial  |
+| Prompts Command        | [specs/commands/prompts.md](specs/commands/prompts.md) | `internal/cli/prompts.go` | ✅ Complete  |
 | Run Command (default)  | [specs/commands/run.md](specs/commands/run.md)     | `internal/cli/run.go` | ✅ Complete |
 | Init Command           | [specs/commands/init.md](specs/commands/init.md)   | `internal/cli/init.go` | ✅ Complete |
 | Version Command        | [specs/commands/version.md](specs/commands/version.md) | `internal/cli/version.go` | ✅ Complete |
@@ -23,7 +23,7 @@
 - `version` ✅
 - `help` ✅ (Cobra auto)
 - `completion` ✅ (Cobra auto)
-- `prompts` ⚠️ **PARTIAL** (list only, show missing)
+
 
 ---
 
@@ -96,11 +96,11 @@ Use 'ralph run <prompt-name>' to execute a prompt.
 
 ---
 
-### Phase 3: Prompts Command - Show Subcommand (Missing)
+### Phase 3: Prompts Command - Show Subcommand (Complete)
 
 **Goal:** Implement `prompts show <name>` subcommand to display full prompt content
 
-**Status:** ❌ Not Started
+**Status:** ✅ Complete
 
 **Paths:**
 - `internal/cli/prompts.go` (add `show` subcommand)
@@ -108,13 +108,13 @@ Use 'ralph run <prompt-name>' to execute a prompt.
 - `internal/cli/prompts_test.go` (new test file)
 
 **Checklist:**
-- [ ] Add `show` subcommand to `internal/cli/prompts.go`
-- [ ] Implement `prompts show build` - outputs full built-in build prompt
-- [ ] Implement `prompts show plan` - outputs full built-in plan prompt
-- [ ] Implement `prompts show <custom>` - outputs custom prompt file content (frontmatter stripped)
-- [ ] Implement error handling for nonexistent prompts
-- [ ] Write tests in `prompts_test.go`
-- [ ] Verify exit codes: 0 on success, non-zero on error
+- [x] Add `show` subcommand to `internal/cli/prompts.go` ✅
+- [x] Implement `prompts show build` - outputs full built-in build prompt ✅
+- [x] Implement `prompts show plan` - outputs full built-in plan prompt ✅
+- [x] Implement `prompts show <custom>` - outputs custom prompt file content (frontmatter stripped) ✅
+- [x] Implement error handling for nonexistent prompts ✅
+- [x] Write tests in `prompts_test.go` ✅
+- [x] Verify exit codes: 0 on success, non-zero on error ✅
 
 **Current Gap:**
 ```bash
@@ -201,16 +201,10 @@ Error: accepts at most 2 arg(s), received 3  # ❌ Subcommand not implemented
 |-------|--------------------------------------------|-------------|------------|
 | 1     | Help Command Verification                  | ✅ Complete  | 100%       |
 | 2     | Prompts Command - List Subcommand          | ✅ Complete  | 100%       |
-| 3     | Prompts Command - Show Subcommand          | ❌ Pending   | 0%         |
+| 3     | Prompts Command - Show Subcommand          | ✅ Complete  | 100%       |
 
 **Remaining Effort:**
-- Phase 3: Prompts Show Subcommand - ~2-3 hours
-  - Add `show` subcommand to prompts.go: 1h
-  - Hook up to existing prompt content functions: 0.5h
-  - Write tests: 1h
-  - Manual verification: 0.5h
-
----
+None. All phases complete.
 
 ## Known Existing Work
 
