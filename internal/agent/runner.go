@@ -48,7 +48,7 @@ func executeAgentCommand(
 	output io.Writer,
 	errPrefix string,
 ) (string, error) {
-	cmd := exec.Command(command, args...) // #nosec G204 -- command and args are controlled by internal agent integrations
+	cmd := exec.Command(command, args...) // #nosec G204 G702 -- internally controlled by agent integrations
 	if env != nil {
 		cmd.Env = cloneStringSlice(env)
 	}
