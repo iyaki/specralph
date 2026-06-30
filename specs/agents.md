@@ -34,7 +34,9 @@ internal/
     agent.go
     opencode.go
     claude.go
-    cursor.go
+    oh-my-pi.go
+    codex.go
+    copilot.go
 specs/
   agents/
     opencode.md
@@ -68,13 +70,12 @@ specs/
 3. Availability check runs via `LookPath`.
 4. Agent executes the external CLI command and returns output.
 
-Supported Agents
-
 - Oh My Pi (omp): [specs/agents/oh-my-pi.md](agents/oh-my-pi.md)
 - Opencode: [specs/agents/opencode.md](agents/opencode.md)
 - Claude: [specs/agents/claude.md](agents/claude.md)
 - Cursor: [specs/agents/cursor.md](agents/cursor.md)
 - OpenAI Codex: [specs/agents/codex.md](agents/codex.md)
+- GitHub Copilot: [specs/agents/copilot.md](agents/copilot.md)
 
 ## Data model
 
@@ -163,6 +164,9 @@ Supported Agents
 - `ralph --agent opencode build` selects `opencode`.
 - `ralph --agent claude --model claude-sonnet-4 build` passes model arg.
 - `ralph --agent cursor build` executes `cursor` CLI.
+- `ralph --agent copilot build` invokes `copilot -p`.
+- `ralph --agent copilot --model gpt-4o build` includes `--model gpt-4o`.
+- `ralph --agent copilot --agent explore build` includes `--agent explore`.
 
 ## Appendices
 
