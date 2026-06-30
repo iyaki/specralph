@@ -120,6 +120,7 @@ func TestGetAgentReturnsExpectedType(t *testing.T) {
 		{name: "claude", agentName: "claude", expected: "claude"},
 		{name: "cursor", agentName: "cursor", expected: "cursor"},
 		{name: "opencode", agentName: "opencode", expected: "opencode"},
+		{name: "codex", agentName: "codex", expected: "codex"},
 	}
 
 	for _, tc := range tests {
@@ -473,4 +474,88 @@ func equalStringSlices(a, b []string) bool {
 	}
 
 	return true
+}
+func TestCodexExecuteAndAvailability(t *testing.T) {
+	tmp := t.TempDir()
+	writeExecutable(t, tmp, "codex", "#!/bin/sh\necho \"codex:$*\"\n")
+	t.Setenv("PATH", tmp)
+
+	a := &agent.CodexAgent{Model: "gpt-5", AgentMode: "agent-mode"}
+	if !a.IsAvailable() {
+		t.Fatal("expected codex to be available")
+	}
+	if a.Name() != "codex" {
+		t.Fatalf("unexpected name: %s", a.Name())
+	}
+
+	result, err := a.Execute("prompt", &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Verify expected args are present
+	if !strings.Contains(result, "codex:exec --model gpt-5") ||
+		!strings.Contains(result, "--sandbox read-only") ||
+		!strings.Contains(result, "--ask-for-approval never") ||
+		!strings.Contains(result, "--ephemeral --agent agent-mode prompt") {
+		t.Fatalf("unexpected result: %q", result)
+	}
+
+	t.Setenv("PATH", t.TempDir())
+	if a.IsAvailable() {
+		t.Fatal("expected codex to be unavailable")
+	}
+}
+
+func TestCodexExecuteWithEnvironmentOverrides(t *testing.T) {
+	tmp := t.TempDir()
+	writeExecutable(t, tmp, "codex", "#!/bin/sh\necho \"codex:$*\"\n")
+	t.Setenv("PATH", tmp)
+	t.Setenv("CODEX_SANDBOX", "workspace-write")
+	t.Setenv("CODEX_APPROVAL_MODE", "on-request")
+	t.Setenv("CODEX_EPHEMERAL", "false")
+	t.Setenv("CODEX_OUTPUT_PATH", "/tmp/output.txt")
+	t.Setenv("CODEX_PROFILE", "my-profile")
+
+	a := &agent.CodexAgent{Model: "gpt-5.4"}
+
+	result, err := a.Execute("prompt", &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Check core flags with env overrides
+	if !strings.Contains(result, "codex:exec --model gpt-5.4 --sandbox workspace-write --ask-for-approval on-request") {
+		t.Fatalf("unexpected result: %q", result)
+	}
+	// Ephemeral should NOT be present when set to false
+	if strings.Contains(result, "--ephemeral") {
+		t.Fatalf("expected no --ephemeral flag, got %q", result)
+	}
+	if !strings.Contains(result, "--output-last-message /tmp/output.txt") {
+		t.Fatalf("expected output path, got %q", result)
+	}
+	if !strings.Contains(result, "--profile my-profile") {
+		t.Fatalf("expected profile, got %q", result)
+	}
+}
+
+func TestCodexExecuteWithoutOptionalFields(t *testing.T) {
+	tmp := t.TempDir()
+	writeExecutable(t, tmp, "codex", "#!/bin/sh\necho \"codex:$*\"\n")
+	t.Setenv("PATH", tmp)
+
+	a := &agent.CodexAgent{}
+
+	result, err := a.Execute("prompt", &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should have defaults: sandbox read-only, approval never, ephemeral true
+	if !strings.Contains(result, "codex:exec --sandbox read-only --ask-for-approval never --ephemeral prompt") {
+		t.Fatalf("expected default args, got %q", result)
+	}
+}
+
+func TestCodexExecuteStreamsOutputInRealTime(t *testing.T) {
+	a := &agent.CodexAgent{}
+	testAgentExecutionStreamsOutputInRealTime(t, "codex", a.Execute)
 }
