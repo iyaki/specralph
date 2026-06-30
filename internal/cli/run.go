@@ -311,7 +311,7 @@ func setupSharedFlags(cmd *cobra.Command, cfg *config.Config) {
 	flags.BoolVar(&cfg.LogTruncate, "log-truncate", false, "Truncate log file before writing")
 	flags.StringVar(&cfg.CustomPrompt, "prompt", "", "Inline custom prompt (overrides prompt files)"+
 		"\nInclude <COMPLETION_SIGNAL> in the prompt to denote when completion is reached")
-	flags.StringVarP(&cfg.AgentName, "agent", "a", "", "AI agent to use: omp, opencode, claude, cursor"+
+	flags.StringVarP(&cfg.AgentName, "agent", "a", "", "AI agent to use: omp, opencode, claude, cursor, codex"+
 		" (default: opencode)")
 	flags.StringVar(&cfg.Model, "model", "", "AI model to use (e.g., claude-sonnet-4, gpt-4)")
 	flags.StringVar(&cfg.AgentMode, "agent-mode", "", "Agent mode/sub-agent to use (e.g., reviewer, planner)")
