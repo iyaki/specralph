@@ -122,6 +122,7 @@ func TestGetAgentReturnsExpectedType(t *testing.T) {
 		{name: "opencode", agentName: "opencode", expected: "opencode"},
 		{name: "codex", agentName: "codex", expected: "codex"},
 		{name: "copilot", agentName: "copilot", expected: "copilot"},
+		{name: "antigravity", agentName: "antigravity", expected: "antigravity"},
 	}
 
 	for _, tc := range tests {
@@ -159,6 +160,7 @@ func TestGetAgentCapturesEnvironmentSnapshot(t *testing.T) {
 		{name: "cursor", agentName: "cursor", command: "cursor"},
 		{name: "codex", agentName: "codex", command: "codex"},
 		{name: "copilot", agentName: "copilot", command: "copilot"},
+		{name: "antigravity", agentName: "antigravity", command: "agy"},
 	}
 
 	for _, tc := range tests {
@@ -348,6 +350,13 @@ func TestAllAgentsExecuteWithProvidedEnvironment(t *testing.T) {
 			name:    "cursor",
 			command: "cursor",
 			executeFn: (&agent.CursorAgent{
+				Env: []string{"OVERRIDE_ME=from-agent"},
+			}).Execute,
+		},
+		{
+			name:    "antigravity",
+			command: "agy",
+			executeFn: (&agent.AntigravityAgent{
 				Env: []string{"OVERRIDE_ME=from-agent"},
 			}).Execute,
 		},
@@ -649,4 +658,86 @@ func TestCopilotExecuteWithoutOptionalFields(t *testing.T) {
 func TestCopilotExecuteStreamsOutputInRealTime(t *testing.T) {
 	a := &agent.CopilotAgent{}
 	testAgentExecutionStreamsOutputInRealTime(t, "copilot", a.Execute)
+}
+func TestAntigravityExecuteAndAvailability(t *testing.T) {
+	tmp := t.TempDir()
+	writeExecutable(t, tmp, "agy", "#!/bin/sh\necho \"agy:$*\"\n")
+	t.Setenv("PATH", tmp)
+
+	a := &agent.AntigravityAgent{Model: "Gemini 2.5 Flash"}
+
+	result, err := a.Execute("prompt", &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Core invocation: agy -p <prompt> --model <model>
+	if !strings.Contains(result, "agy:-p prompt --model Gemini 2.5 Flash") {
+		t.Fatalf("unexpected result: %q", result)
+	}
+}
+
+func TestAntigravityExecuteWithEnvironmentOverrides(t *testing.T) {
+	tmp := t.TempDir()
+	writeExecutable(t, tmp, "agy", "#!/bin/sh\necho \"agy:$*\"\n")
+	t.Setenv("PATH", tmp)
+	t.Setenv("ANTIGRAVITY_MODEL", "Gemini 2.5 Pro")
+	t.Setenv("ANTIGRAVITY_SANDBOX_MODE", "proceed-in-sandbox")
+	t.Setenv("ANTIGRAVITY_TOOL_PERMISSION", "request-review")
+
+	a := &agent.AntigravityAgent{Model: "Gemini 2.5 Flash"}
+
+	result, err := a.Execute("prompt", &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Env overrides take precedence
+	if !strings.Contains(result, "agy:-p prompt --model Gemini 2.5 Pro") {
+		t.Fatalf("expected model override, got %q", result)
+	}
+}
+
+func TestAntigravityExecuteWithoutOptionalFields(t *testing.T) {
+	tmp := t.TempDir()
+	writeExecutable(t, tmp, "agy", "#!/bin/sh\necho \"agy:$*\"\n")
+	t.Setenv("PATH", tmp)
+
+	a := &agent.AntigravityAgent{}
+
+	result, err := a.Execute("prompt", &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should have defaults: model empty, no extra flags
+	if !strings.Contains(result, "agy:-p prompt") {
+		t.Fatalf("expected basic args, got %q", result)
+	}
+	// Should NOT have --model when not specified
+	if strings.Contains(result, "--model") {
+		t.Fatalf("expected no --model flag, got %q", result)
+	}
+}
+
+func TestAntigravityExecuteStreamsOutputInRealTime(t *testing.T) {
+	a := &agent.AntigravityAgent{}
+	testAgentExecutionStreamsOutputInRealTime(t, "agy", a.Execute)
+}
+
+func TestAntigravityIsAvailable(t *testing.T) {
+	tmp := t.TempDir()
+	writeExecutable(t, tmp, "agy", "#!/bin/sh\necho 'agy version'\n")
+	t.Setenv("PATH", tmp)
+
+	a := &agent.AntigravityAgent{}
+	if !a.IsAvailable() {
+		t.Fatal("expected agy to be available")
+	}
+}
+
+func TestAntigravityIsAvailableReturnsFalseWhenMissing(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+
+	a := &agent.AntigravityAgent{}
+	if a.IsAvailable() {
+		t.Fatal("expected agy to be unavailable")
+	}
 }
