@@ -50,7 +50,7 @@ Spec-driven development reduces ambiguity and keeps AI agents focused on concret
 | Claude Code | `claude` |
 | OpenCode | `opencode` |
 | Cursor | `cursor` |
-| Oh My Pi | `omp` |
+| Oh My Pi (version >= 17.0.0) | `omp` |
 | OpenAI Codex | `codex` |
 | GitHub Copilot | `copilot` |
 | Google Antigravity | `agy` |

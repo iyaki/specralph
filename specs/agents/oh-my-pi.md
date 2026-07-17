@@ -77,7 +77,7 @@ specs/
 
 ### Execute omp (happy path)
 
-1. Build args: `--print`, `--no-title`, `--no-session`, optional `--model <model>`, `<prompt>`.
+1. Build args: `--print`, `--no-title`, `--no-session`, `--print-thoughts`, `--auto-approve`, optional `--model <model>`, `<prompt>`. 
 2. Execute `omp` CLI.
 3. Stream stdout/stderr and return combined output.
 
@@ -96,6 +96,7 @@ specs/
 
 ## Configuration
 
+- Oh-my-pi agent version >= v17.0.0 is needed because of the usage of `--print-thoughts`, `--auto-approve` flags.
 - Relevant fields: `AgentName`, `Model`, `AgentMode`.
 - See configuration spec for definitions and precedence.
 

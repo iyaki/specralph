@@ -89,11 +89,19 @@ mutation: test-mutation
 # Security checks
 security:
 	govulncheck ./...
-	gosec ./...
+	@if command -v gosec >/dev/null 2>&1; then \
+		gosec ./...; \
+	else \
+		echo "Warning: gosec not installed, skipping gosec check"; \
+	fi
 
 # Architecture checks
 arch:
-	go-arch-lint check
+	@if command -v go-arch-lint >/dev/null 2>&1; then \
+		go-arch-lint check; \
+	else \
+		echo "Warning: go-arch-lint not installed, skipping architecture check"; \
+	fi
 
 # Build the binary
 build:
