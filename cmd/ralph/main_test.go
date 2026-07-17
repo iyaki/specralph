@@ -101,13 +101,21 @@ func TestGoModulePathUsesSpecralph(t *testing.T) {
 	}
 }
 
-func TestSkillsLockPointsToSpecralphRepo(t *testing.T) {
+func TestSkillsLockPointsToExternalRepos(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join("..", "..", "skills-lock.json"))
 	if err != nil {
 		t.Fatalf("failed to read skills-lock.json: %v", err)
 	}
 
-	if !strings.Contains(string(content), `"source": "iyaki/specralph"`) {
-		t.Fatalf("expected skills-lock.json to point spec-creator to iyaki/specralph")
+	expected := []string{
+		"github/awesome-copilot",
+		"iyaki/opencode-base-template",
+		"anthropics/skills",
+		"obra/superpowers",
+	}
+	for _, exp := range expected {
+		if !strings.Contains(string(content), exp) {
+			t.Fatalf("expected skills-lock.json to contain %q", exp)
+		}
 	}
 }
