@@ -174,7 +174,7 @@ jobs:
           sha256sum ralph_* | sort > checksums.txt
 
       - name: Create or update release
-        uses: softprops/action-gh-release@v3.0.1
+        uses: softprops/action-gh-release@v3.0.2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           files: |
