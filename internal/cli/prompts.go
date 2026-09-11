@@ -1,6 +1,7 @@
 package cli
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,11 @@ import (
 	"github.com/iyaki/specralph/internal/prompt"
 )
 
+// guideText is the static authoring contract printed by `prompts guide`.
+//
+//go:embed guide.md
+var guideText string
+
 // NewPromptsCommand creates the prompts command for listing and viewing prompts.
 func NewPromptsCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -26,7 +32,23 @@ func NewPromptsCommand() *cobra.Command {
 	cmd.AddCommand(NewPromptsShowCommand())
 	cmd.AddCommand(NewPromptsValidateCommand())
 
+	cmd.AddCommand(NewPromptsGuideCommand())
+
 	return cmd
+}
+
+// NewPromptsGuideCommand creates the prompts guide subcommand.
+func NewPromptsGuideCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "guide",
+		Short: "Show the prompt authoring guide",
+		Long:  `Print the authoring contract for custom prompt files.`,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := io.WriteString(cmd.OutOrStdout(), guideText)
+
+			return err
+		},
+	}
 }
 
 // NewPromptsListCommand creates the prompts list subcommand.

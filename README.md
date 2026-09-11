@@ -165,6 +165,9 @@ ralph --env HTTP_PROXY=http://127.0.0.1:8080 build
 | `ralph <prompt> [scope]` | Alias to `ralph run <prompt> [scope]` when `<prompt>` is not a subcommand |
 | `ralph prompts list` | List all available built-in and custom prompts |
 | `ralph prompts show <name>` | Display full content of a specific prompt |
+| `ralph prompts guide` | Print the authoring guide for custom prompt files |
+| `ralph prompts validate <target>` | Run static checks on a prompt file or named prompt |
+| `ralph skill install [dir]` | Install the bundled prompt-authoring skill into a project |
 | `ralph init` | Generate a starter config file |
 | `ralph run init` | Run a prompt named `init` |
 | `ralph version` | Print the version number |
@@ -230,6 +233,12 @@ ralph prompts show plan
 
 # View a custom prompt file
 ralph prompts show review
+
+# Print the prompt authoring guide
+ralph prompts guide
+
+# Validate a prompt before running it
+ralph prompts validate review
 ```
 
 The `prompts list` subcommand displays:
@@ -243,6 +252,18 @@ This command is useful when you want to:
 - Debug prompt content without actually running the agent loop
 
 The full prompt content is displayed exactly as it would be sent to the agent (with frontmatter stripped for custom prompts), making it easy to verify your prompt configuration or understand the default behavior.
+
+### `ralph skill`
+
+`ralph skill install [dir]` writes the bundled prompt-authoring skill into a project so AI agents working there discover specralph prompt conventions automatically. The directory defaults to `.agents/skills`; the skill installs to `<dir>/specralph-prompts/SKILL.md` and always matches the installing binary's version. Use `--force` to overwrite an existing installation.
+
+```bash
+# Install into the current project
+ralph skill install
+
+# Install into a custom directory
+ralph skill install ~/my-project/.agents/skills
+```
 
 ## Creating Custom Prompts
 

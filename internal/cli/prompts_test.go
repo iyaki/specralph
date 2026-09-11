@@ -597,3 +597,41 @@ func TestPromptsValidateUnknownNameErrors(t *testing.T) {
 		t.Fatalf("expected not-found error, got: %v", err)
 	}
 }
+
+func TestPromptsGuidePrintsAuthoringContract(t *testing.T) {
+	cmd := cli.NewPromptsGuideCommand()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("expected guide to print without error, got: %v", err)
+	}
+
+	output := out.String()
+	for _, want := range []string{
+		"$HOME/.ralph",                // file location
+		"ralph run <name>",            // invocation
+		"description:",                // frontmatter convention
+		"<COMPLETION_SIGNAL>",         // placeholder signal
+		"<promise>COMPLETE</promise>", // literal signal
+		"Objective",                   // recommended structure
+		"Stop Condition",              // recommended structure
+		"scope",                       // scope argument behavior
+		"ralph skill install",         // distribution line
+	} {
+		if !strings.Contains(output, want) {
+			t.Errorf("expected guide to contain %q, got %q", want, output)
+		}
+	}
+}
+
+func TestPromptsGuideRegistered(t *testing.T) {
+	cmd := cli.NewPromptsCommand()
+	for _, sub := range cmd.Commands() {
+		if sub.Name() == "guide" {
+			return
+		}
+	}
+
+	t.Error("expected prompts command to register a guide subcommand")
+}
