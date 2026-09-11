@@ -1,6 +1,6 @@
 # Implementation Plan (commands/prompt-authoring)
 
-**Status:** Authoring Helpers + `prompts validate` + Run-Time Warning Complete (6/8 phases)
+**Status:** Complete (8/8 phases) — Authoring Helpers, `prompts validate`, Run-Time Warning, `prompts guide`, `skill install`
 **Last Updated:** 2026-09-11
 **Primary Spec:** [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md), [specs/commands/skill.md](specs/commands/skill.md)
 
@@ -14,12 +14,12 @@
 | `prompts list` / `prompts show` | [specs/commands/prompts.md](specs/commands/prompts.md)      | `internal/cli/prompts.go`             | —                                                                | ✅ Complete   |
 | Prompt resolution chain     | [specs/prompts.md](specs/prompts.md)                            | `internal/prompt/prompts.go`, `frontmatter.go` | —                                                               | ✅ Complete   |
 | Prompt authoring helpers    | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/prompt/prompts.go`, `frontmatter.go` | —                                                               | ✅ Complete   |
-| `prompts guide`             | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | guide fixture (go:embed)                                         | ❌ Missing    |
+| `prompts guide`             | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | guide fixture (go:embed)                                         | ✅ Complete   |
 | `prompts validate`          | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | —                                                                | ✅ Complete   |
 | Run-time missing-signal warning | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/run.go`        | —                                                                | ✅ Complete |
-| `skill install` (distribution) | [specs/commands/skill.md](specs/commands/skill.md)           | `internal/cli/skill.go` (new)         | `.agents/skills/specralph-prompts/SKILL.md` (committed ✅); build-time embed ❌ | ❌ Missing |
+| `skill install` (distribution) | [specs/commands/skill.md](specs/commands/skill.md)           | `internal/cli/skill.go`               | `internal/cli/skill.md` (embedded; canonical `.agents` path is a symlink ✅) | ✅ Complete |
 
-**Registered Commands** (verified `internal/cli/cmd.go:47-50`): `init`, `run`, `version`, `prompts` (+ Cobra `help`/`completion`). No `skill` command.
+**Registered Commands** (verified `internal/cli/cmd.go:47-51`): `init`, `run`, `version`, `prompts`, `skill` (+ Cobra `help`/`completion`).
 
 ---
 
@@ -91,33 +91,36 @@
 
 ### Phase 6: `prompts guide` Subcommand
 
-**Goal:** Print the embedded authoring contract (static text, stdout, exit 0).
+**Status:** ✅ Complete
 
-**Status:** ❌ Not started
+**Goal:** Print the embedded authoring contract (static text, stdout, exit 0).
 
 **Paths:**
 - `internal/cli/prompts.go` (new `NewPromptsGuideCommand`)
 - `internal/cli/guide.md` (fixture, `go:embed` — spec default)
 - `internal/cli/prompts_test.go`
 
-**Checklist:**
-- [ ] Guide fixture covering all spec-mandated content: file location (`PromptsDir`, default `$HOME/.ralph`, `<name>.md`, invoked as `ralph run <name>` / `ralph <name>`), frontmatter `description` convention, completion signal contract (placeholder + literal), recommended structure (objective → study inputs → single-task steps → validation → stop condition), `scope` argument behavior (not substituted — stated explicitly)
-- [ ] Distribution line pointing at `ralph skill install [dir]` (default `.agents/skills`) — depends on Phase 8 for the command to exist
-- [ ] `go:embed` the fixture; print to stdout, no banners, pipe-friendly
-- [ ] Register subcommand; appears in `ralph prompts --help`
-- [ ] Open question resolved per spec default: fixture file, not inline string
+- [x] Guide fixture covering all spec-mandated content: file location (`PromptsDir`, default `$HOME/.ralph`, `<name>.md`, invoked as `ralph run <name>` / `ralph <name>`), frontmatter `description` convention, completion signal contract (placeholder + literal), recommended structure (objective → study inputs → single-task steps → validation → stop condition), `scope` argument behavior (not substituted — stated explicitly)
+- [x] Distribution line pointing at `ralph skill install [dir]` (default `.agents/skills`)
+- [x] `go:embed` the fixture; print to stdout, no banners, pipe-friendly
+- [x] Register subcommand; appears in `ralph prompts --help`
+- [x] Open question resolved per spec default: fixture file, not inline string
 
+**Implementation notes (2026-09-11):**
+
+- Fixture is `internal/cli/guide.md`, embedded via `_ "embed"` + `//go:embed guide.md` into `guideText`; `NewPromptsGuideCommand` writes it to `cmd.OutOrStdout()` verbatim. No config load, no disk access.
+- Toolchain note (go1.26.1): a *named* `"embed"` import is reported unused when the only usage is a `//go:embed` on a `string` var — use `_ "embed"` (matches the embed package doc's string example). Verified against a minimal repro.
 **Definition of Done:** `ralph prompts guide` prints contract, exit 0; test asserts content markers (each spec-required topic present).
 
-**Risks/Dependencies:** Distribution line references Phase 8's command; implement Phase 8 before releasing, or the guide advertises a nonexistent command.
+**Risks/Dependencies:** Distribution line references Phase 8's command — both shipped together in commit `a37ede3`.
 
 ---
 
 ### Phase 7: Run-Time Missing-Signal Warning
 
-**Goal:** Warn once on stderr when an executed prompt file cannot ever complete the loop.
-
 **Status:** ✅ Complete
+
+**Goal:** Warn once on stderr when an executed prompt file cannot ever complete the loop.
 
 **Paths:**
 - `internal/cli/run.go` (hook after `prompt.GetPrompt` at `:77-80`)
@@ -143,30 +146,37 @@
 
 ### Phase 8: `ralph skill install [dir]` (Related Domain: skill.md)
 
-**Goal:** Distribute the embedded prompt-authoring skill so agents discover these conventions — the guide's distribution pointer and the workflow's discoverability story.
+**Status:** ✅ Complete (commit `a37ede3`)
 
-**Status:** ❌ Not started (spec Proposed; skill source committed)
+**Goal:** Distribute the embedded prompt-authoring skill so agents discover these conventions — the guide's distribution pointer and the workflow's discoverability story.
 
 **Paths:**
 - `internal/cli/skill.go` (new)
-- `.agents/skills/specralph-prompts/SKILL.md` (✅ already committed, canonical source — commit `1a7512f`)
-- `Makefile` / build step (dot-directories cannot be `go:embed`-ed directly; spec allows copy/relocate into embedding package at build time)
-- `internal/cli/cmd.go:46-51` (register `skill` command)
+- `internal/cli/skill.md` (embedded skill source; renamed from `.agents/skills/specralph-prompts/SKILL.md`)
+- `.agents/skills/specralph-prompts/SKILL.md` (relative symlink → `../../../internal/cli/skill.md`, keeps the canonical agent-discovery path working)
+- `internal/cli/cmd.go` (registers `skill` command)
 
 **Checklist:**
-- [ ] Build-time embed of the skill content into the binary
-- [ ] `skill install [dir]`: default `.agents/skills`; target `<dir>/specralph-prompts/SKILL.md`; dirs created `0755`, file written `0644`
-- [ ] Existing target without `--force` → error `skill already exists at <target> (use --force to overwrite)`, original untouched
-- [ ] `--force` overwrites; no backup
-- [ ] Success message to stdout: `Installed specralph-prompts skill to <target>`; exit 0
-- [ ] Config-independent (does not load `ralph.toml`)
-- [ ] Installed file passes `skill-creator` `quick_validate.py` (frontmatter valid, name `specralph-prompts`, description without angle brackets)
+- [x] Build-time embed of the skill content into the binary (plain `//go:embed skill.md` in the package — no Makefile changes needed)
+- [x] `skill install [dir]`: default `.agents/skills`; target `<dir>/specralph-prompts/SKILL.md`; dirs created `0755`, file written `0644`
+- [x] Existing target without `--force` → error `skill already exists at <target> (use --force to overwrite)`, original untouched
+- [x] `--force` overwrites; no backup
+- [x] Success message to stdout: `Installed specralph-prompts skill to <target>`; exit 0
+- [x] Config-independent (does not load `ralph.toml`; tested with a broken `ralph.toml` present)
+- [x] Installed file passes `skill-creator` `quick_validate.py` (frontmatter valid, name `specralph-prompts`, description without angle brackets)
+
+**Implementation notes (2026-09-11):**
+
+- Embed mechanism: `go:embed` cannot read dot-directories, so the skill source was moved into the embedding package (`internal/cli/skill.md`) and the canonical `.agents/.../SKILL.md` path became a relative symlink (git mode 120000). Single source of truth, zero build steps; `TestEmbeddedSkillMatchesCanonicalSource` fails if the embed and the `.agents` path ever diverge.
+- Write failure removes a partially written target (`os.Remove` after `WriteFile` error) per the spec's "no partial file left behind".
+- README updated in the same commit: command table rows for `prompts guide`, `prompts validate`, `skill install`, plus a `### ralph skill` section.
 
 **Definition of Done:** all 6 skill.md verifications pass; tests cover happy path, custom dir, collision without/with `--force`.
 
-**Risks/Dependencies:** Embed mechanism is the only non-trivial part (Go `embed` cannot read `.agents/...`). Independent of Phases 4–7; only Phase 6's guide text references it.
+**Risks/Dependencies:** Symlink checkouts on symlink-unsupported filesystems (e.g. Windows without developer mode) would break the `.agents` path but not the binary or tests of the embedded content; the build is unaffected.
 
 ---
+
 
 ## Verification Log
 
@@ -225,6 +235,24 @@
 
 - 2026-09-11: baseline unchanged — no source modified in this planning pass; `make quality` to be run as gate for Phase 4 TDD start.
 
+### 2026-09-11: Phases 6+8 - `prompts guide` and `ralph skill install`
+
+- 2026-09-11: TDD RED - `go test ./internal/cli/ -run 'TestPromptsGuide|TestSkillInstall|TestEmbeddedSkill|TestSkillHelp'` - failed on undefined `cli.NewPromptsGuideCommand` / `cli.NewSkillCommand` (expected missing-feature failure).
+- 2026-09-11: skill source relocated - `git mv .agents/skills/specralph-prompts/SKILL.md internal/cli/skill.md` + relative symlink back (git mode 120000) - canonical `.agents` path preserved; embed works without build steps.
+- 2026-09-11: `go test ./internal/cli/ -run 'TestPromptsGuide|TestSkillInstall|TestEmbeddedSkill|TestSkillHelp'` - all 8 new tests pass (guide markers + registration; install default dir, custom dir, collision, force, embed-vs-canonical parity, help listing).
+- 2026-09-11: `make lint` - 0 issues (shortened Long strings, local `dirPerm`/`filePerm` consts matching `writer.go` convention, moved nosec comment, wrapped long assertion).
+- 2026-09-11: `go test ./...` - all packages pass, including `test/e2e`.
+- 2026-09-11: `make test-race` - no data races. `make coverage` - total 95.8% (gate ≥95%). `make security` - gosec 0 issues. `make arch` - no warnings.
+- 2026-09-11: `make mutation ARGS="internal/cli"` - Killed 63, Lived 0, Timed out 143, test efficacy 100.00%, mutator coverage 95.45%.
+- 2026-09-11: `./bin/ralph prompts guide` - prints the 52-line authoring contract to stdout, exit 0 (spec verification 1).
+- 2026-09-11: `./bin/ralph prompts --help` - `guide` listed alongside `list`/`show`/`validate`; `./bin/ralph skill --help` - `install` listed (skill.md verification 6).
+- 2026-09-11: `./bin/ralph skill install` (in /tmp/skilltest) - `Installed specralph-prompts skill to .agents/skills/specralph-prompts/SKILL.md`, exit 0, file created (skill.md verification 1).
+- 2026-09-11: `./bin/ralph skill install /tmp/skilltest/custom` - installs to custom dir, exit 0 (verification 2).
+- 2026-09-11: second `./bin/ralph skill install` - `Error: skill already exists at .agents/skills/specralph-prompts/SKILL.md (use --force to overwrite)`, exit 1, original content untouched (verification 3).
+- 2026-09-11: `./bin/ralph skill install --force` - exit 0, content replaced with embedded version (verification 4).
+- 2026-09-11: `python3 .agents/skills/skill-creator/scripts/quick_validate.py <installed skill dir>` - "Skill is valid!", exit 0, for both default-dir and custom-dir installs (verification 5).
+
+
 ---
 
 ## Summary
@@ -236,11 +264,11 @@
 | 3     | Prompts Command - Show Subcommand            | ✅ Complete | 100%       |
 | 4     | Prompt Package Authoring Helpers             | ✅ Complete | 100%       |
 | 5     | `prompts validate <target>`                  | ✅ Complete | 100%       |
-| 6     | `prompts guide`                              | ❌ Missing  | 0%         |
+| 6     | `prompts guide`                              | ✅ Complete | 100%       |
 | 7     | Run-Time Missing-Signal Warning              | ✅ Complete | 100%       |
-| 8     | `ralph skill install` (skill.md)             | ❌ Missing  | 0%         |
+| 8     | `ralph skill install` (skill.md)             | ✅ Complete | 100%       |
 
-**Remaining Effort:** Phases 6+8 (guide and skill install ship together so the guide's distribution line references a real command). All new code TDD; final gate `make quality`, then `make mutation`.
+**Remaining Effort:** None — all 8 phases complete (commit `a37ede3` closes Phases 6+8). Mutation testing run on `internal/cli` (efficacy 100%, 0 lived).
 
 ---
 
@@ -253,7 +281,7 @@
 - `internal/prompt.Prompt` resolution chain (`GetPrompt`): inline → stdin → explicit file → `PromptsDir` file (upwards search via `findFileUpwards`) → bundled build/plan. Banner written for file-sourced prompts.
 - `internal/prompt.ParseFrontMatter` (`frontmatter.go`) parses `model`/`agentMode` overrides — reusable for the `frontmatter`/`description` checks.
 - `cli.hasCompletionSignal` (`run.go:277`): literal, line-exact check of *agent output* inside `RunLoop` — protected by spec; do not repurpose for content checking.
-- `.agents/skills/specralph-prompts/SKILL.md` committed (canonical skill source, commit `1a7512f`); only the embedding/CLI distribution is missing.
+- `.agents/skills/specralph-prompts/SKILL.md` is now a relative symlink to `internal/cli/skill.md` (the embedded source, commit `a37ede3`); `ralph skill install [dir]` distributes it (`internal/cli/skill.go`), `prompts guide` prints the embedded `internal/cli/guide.md` contract. README documents all three commands.
 - Run-time missing-signal warning implemented in `internal/cli/run.go` (commit `c66eeaa`): `fmOverride != nil` used as the file-source provenance signal (non-nil exactly for `explicitPromptFile`/`promptFromDir`); warning to stderr once, before `RunLoop`.
 - Cobra command registration pattern established in `cmd.go` (`NewPromptsCommand` composition, `cmd.AddCommand`).
 
