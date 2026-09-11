@@ -96,8 +96,8 @@
 			"extensions": [
 				"editorconfig.editorconfig",
 				"golang.go",
-				"nhoizey.gremlins",
-				"sst-dev.opencode"
+				"nhoizey.gremlins"
+				// "sst-dev.opencode"
 			]
 		}
 	},
@@ -107,20 +107,20 @@
 		"Install npm packages": "npm install",
 		"Install go tools": "/bin/bash .devcontainer/install-go-tools.sh",
 		"Setup lefthook": "lefthook install"
-	},
-	"postStartCommand": {
-		"Refresh opencode available models": "opencode models --refresh"
-	},
-
-	"forwardPorts": [
-		// Add your own ports here
-		4096
-	],
-	"portsAttributes": {
-		"4096": {
-			"label": "Default OpenCode server"
-		}
 	}
+	// "postStartCommand": {
+	// 	"Refresh opencode available models": "opencode models --refresh"
+	// },
+
+	// "forwardPorts": [
+	// 	// Add your own ports here
+	// 	4096
+	// ],
+	// "portsAttributes": {
+	// 	"4096": {
+	// 		"label": "Default OpenCode server"
+	// 	}
+	// }
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
