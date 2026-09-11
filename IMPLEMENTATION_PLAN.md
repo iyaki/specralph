@@ -1,6 +1,6 @@
 # Implementation Plan (commands/prompt-authoring)
 
-**Status:** Authoring Helpers + `prompts validate` Complete (5/8 phases)
+**Status:** Authoring Helpers + `prompts validate` + Run-Time Warning Complete (6/8 phases)
 **Last Updated:** 2026-09-11
 **Primary Spec:** [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md), [specs/commands/skill.md](specs/commands/skill.md)
 
@@ -16,7 +16,7 @@
 | Prompt authoring helpers    | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/prompt/prompts.go`, `frontmatter.go` | —                                                               | ✅ Complete   |
 | `prompts guide`             | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | guide fixture (go:embed)                                         | ❌ Missing    |
 | `prompts validate`          | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | —                                                                | ✅ Complete   |
-| Run-time missing-signal warning | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/run.go`        | —                                                                | ❌ Missing    |
+| Run-time missing-signal warning | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/run.go`        | —                                                                | ✅ Complete |
 | `skill install` (distribution) | [specs/commands/skill.md](specs/commands/skill.md)           | `internal/cli/skill.go` (new)         | `.agents/skills/specralph-prompts/SKILL.md` (committed ✅); build-time embed ❌ | ❌ Missing |
 
 **Registered Commands** (verified `internal/cli/cmd.go:47-50`): `init`, `run`, `version`, `prompts` (+ Cobra `help`/`completion`). No `skill` command.
@@ -117,21 +117,27 @@
 
 **Goal:** Warn once on stderr when an executed prompt file cannot ever complete the loop.
 
-**Status:** ❌ Not started
+**Status:** ✅ Complete
 
 **Paths:**
 - `internal/cli/run.go` (hook after `prompt.GetPrompt` at `:77-80`)
 - `internal/cli/run_test.go`
 
 **Checklist:**
-- [ ] After resolution, if source was a prompt file (`cfg.PromptFile` explicit or `PromptsDir/<name>.md`) and text lacks both signal forms → stderr: `warning: prompt file has no completion signal (<COMPLETION_SIGNAL>); the loop will only stop at max iterations`
-- [ ] Inline prompts (`--prompt`) and stdin exempt
-- [ ] Built-ins not special-cased (they contain the signal; check is a natural no-op)
-- [ ] Warning printed exactly once, before loop start; run proceeds normally
+- [x] After resolution, if source was a prompt file (`cfg.PromptFile` explicit or `PromptsDir/<name>.md`) and text lacks both signal forms → stderr: `warning: prompt file has no completion signal (<COMPLETION_SIGNAL>); the loop will only stop at max iterations`
+- [x] Inline prompts (`--prompt`) and stdin exempt
+- [x] Built-ins not special-cased (they contain the signal; check is a natural no-op)
+- [x] Warning printed exactly once, before loop start; run proceeds normally
 
 **Definition of Done:** spec verification 7 reproduced as failing test first (signal-less `prompts/review.md` → warning on stderr, run continues); inline/stdin/built-in cases assert no warning.
 
-**Risks/Dependencies:** Depends on Phase 4 (`prompt.HasCompletionSignal`). Resolution currently returns text without provenance — may need the file-source branch to report provenance or re-derive it (smallest change: check in the two file-sourced branches or compare resolved path).
+**Implementation notes (2026-09-11):**
+
+- No provenance plumbing needed: `prompt.GetPrompt` returns a non-nil `*config.PromptConfigOverride` exactly for the two file-sourced branches (`explicitPromptFile`, `promptFromDir`); inline, stdin, and bundled return nil. `runCommandLogic` uses `fmOverride != nil` as the file-source condition (commented at the call site), so the exemption matrix falls out of the existing resolution chain.
+- Warning goes to `cmd.ErrOrStderr()` only (not the log-file multiwriter); check runs once per invocation, before `RunLoop`.
+- `cli.hasCompletionSignal` (line-exact agent-output check) untouched; content check reuses `prompt.HasCompletionSignal`.
+
+**Risks/Dependencies:** None — Phase 4 helpers only.
 
 ---
 
@@ -206,6 +212,15 @@
 - 2026-09-11: `./bin/ralph prompts validate /tmp/missing.md` - `resolve` fail, exit 1; content checks not run (plan DoD "missing target").
 - 2026-09-11: `./bin/ralph prompts --help` - `validate` listed alongside `list`/`show`.
 
+### 2026-09-11: Phase 7 - Run-Time Missing-Signal Warning
+
+- 2026-09-11: TDD RED - `go test ./internal/cli/ -run TestRunMissingSignalWarning` - both file-sourced cases failed (no warning emitted); inline/stdin/built-in cases passed (expected missing-feature failure on warn paths only).
+- 2026-09-11: `go test ./internal/cli/ -run TestRunMissingSignalWarning` - all 5 cases pass after implementation (dir-resolved file warns exactly once, `--prompt-file` warns, inline/stdin/built-in silent; DEBUG-mode run proceeds normally in every case).
+- 2026-09-11: `make lint` - 0 issues (extracted `assertRunWarningCase` helper for cyclop, wrapped const for lll).
+- 2026-09-11: `make quality` - full gate passed: gosec 0 issues, go-arch-lint no warnings, coverage gate ≥95%.
+- 2026-09-11: `make build` + `ralph run review` with signal-less `$HOME/.ralph/review.md` (DEBUG=1) - warning on stderr exactly once, run proceeds, exit 0 (spec verification 7).
+- 2026-09-11: `ralph run build` and `ralph run --prompt "Just do it."` - no warning on stderr, exit 0 (exemptions verified end-to-end).
+
 ### 2026-09-11: Test Baseline
 
 - 2026-09-11: baseline unchanged — no source modified in this planning pass; `make quality` to be run as gate for Phase 4 TDD start.
@@ -222,10 +237,10 @@
 | 4     | Prompt Package Authoring Helpers             | ✅ Complete | 100%       |
 | 5     | `prompts validate <target>`                  | ✅ Complete | 100%       |
 | 6     | `prompts guide`                              | ❌ Missing  | 0%         |
-| 7     | Run-Time Missing-Signal Warning              | ❌ Missing  | 0%         |
+| 7     | Run-Time Missing-Signal Warning              | ✅ Complete | 100%       |
 | 8     | `ralph skill install` (skill.md)             | ❌ Missing  | 0%         |
 
-**Remaining Effort:** Phases 6–8 (three phases). Recommended order: 7 → 6+8 (guide and skill install ship together so the guide's distribution line references a real command). All new code TDD; final gate `make quality`, then `make mutation`.
+**Remaining Effort:** Phases 6+8 (guide and skill install ship together so the guide's distribution line references a real command). All new code TDD; final gate `make quality`, then `make mutation`.
 
 ---
 
@@ -239,6 +254,7 @@
 - `internal/prompt.ParseFrontMatter` (`frontmatter.go`) parses `model`/`agentMode` overrides — reusable for the `frontmatter`/`description` checks.
 - `cli.hasCompletionSignal` (`run.go:277`): literal, line-exact check of *agent output* inside `RunLoop` — protected by spec; do not repurpose for content checking.
 - `.agents/skills/specralph-prompts/SKILL.md` committed (canonical skill source, commit `1a7512f`); only the embedding/CLI distribution is missing.
+- Run-time missing-signal warning implemented in `internal/cli/run.go` (commit `c66eeaa`): `fmOverride != nil` used as the file-source provenance signal (non-nil exactly for `explicitPromptFile`/`promptFromDir`); warning to stderr once, before `RunLoop`.
 - Cobra command registration pattern established in `cmd.go` (`NewPromptsCommand` composition, `cmd.AddCommand`).
 
 ## Manual Deployment Tasks
