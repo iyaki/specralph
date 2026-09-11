@@ -1,6 +1,6 @@
 # Implementation Plan (commands/prompt-authoring)
 
-**Status:** Prompt Discovery Complete; Authoring Helpers Complete (4/8 phases)
+**Status:** Authoring Helpers + `prompts validate` Complete (5/8 phases)
 **Last Updated:** 2026-09-11
 **Primary Spec:** [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md), [specs/commands/skill.md](specs/commands/skill.md)
 
@@ -15,7 +15,7 @@
 | Prompt resolution chain     | [specs/prompts.md](specs/prompts.md)                            | `internal/prompt/prompts.go`, `frontmatter.go` | —                                                               | ✅ Complete   |
 | Prompt authoring helpers    | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/prompt/prompts.go`, `frontmatter.go` | —                                                               | ✅ Complete   |
 | `prompts guide`             | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | guide fixture (go:embed)                                         | ❌ Missing    |
-| `prompts validate`          | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | —                                                                | ❌ Missing    |
+| `prompts validate`          | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | —                                                                | ✅ Complete   |
 | Run-time missing-signal warning | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/run.go`        | —                                                                | ❌ Missing    |
 | `skill install` (distribution) | [specs/commands/skill.md](specs/commands/skill.md)           | `internal/cli/skill.go` (new)         | `.agents/skills/specralph-prompts/SKILL.md` (committed ✅); build-time embed ❌ | ❌ Missing |
 
@@ -61,23 +61,27 @@
 
 **Goal:** Static validation with per-check report and exit code 1 on any `fail`.
 
-**Status:** ❌ Not started
+**Status:** ✅ Complete
 
 **Paths:**
 - `internal/cli/prompts.go` (new `NewPromptsValidateCommand`, registered next to list/show at `:24-25`)
 - `internal/cli/prompts_test.go`
 - `internal/prompt/prompts.go` (Phase 4 helpers)
 
-**Checklist:**
-- [ ] Target resolution: `.md` suffix or path separator → file path (must exist); else resolve as prompt name via same chain as `prompts show` (built-in first, then `PromptsDir` via `findFileUpwards`)
-- [ ] Checks in order, all reported (first `fail` does not stop later checks): `resolve`, `frontmatter`, `description`, `completion-signal`
-- [ ] `frontmatter`: unbalanced `---` delimiters → `warn`; empty `description:` in frontmatter → `warn`
-- [ ] `completion-signal`: neither signal form → `fail` (loop can never complete)
-- [ ] Output format: one line per check (`ok|warn|fail  name: message`), then summary (`N failed, M warnings`), path header first
-- [ ] Exit codes: 0 if no `fail`, 1 otherwise; unknown target → `prompt "<target>" not found`, exit 1
-- [ ] Check messages never include prompt content (spec security constraint)
+- [x] Target resolution: `.md` suffix or path separator → file path (must exist); else resolve as prompt name via same chain as `prompts show` (built-in first, then `PromptsDir` via `findFileUpwards`)
+- [x] Checks in order, all reported (first `fail` does not stop later checks): `resolve`, `frontmatter`, `description`, `completion-signal`
+- [x] `frontmatter`: unbalanced `---` delimiters → `warn`; empty `description:` in frontmatter → `warn`
+- [x] `completion-signal`: neither signal form → `fail` (loop can never complete)
+- [x] Output format: one line per check (`ok|warn|fail  name: message`), then summary (`N failed, M warnings`), path header first
+- [x] Exit codes: 0 if no `fail`, 1 otherwise; unknown target → `prompt "<target>" not found`, exit 1
+- [x] Check messages never include prompt content (spec security constraint)
 
-**Definition of Done:** all 7 spec verifications from prompts-authoring.md pass; tests cover file target, named target, built-in, missing target, unbalanced frontmatter, signal-less file.
+**Implementation notes (2026-09-11):**
+
+- Target resolution lives in `resolveValidationTarget`: `.md` suffix or `/`/`\` separator → file path; else built-in (`build`/`plan`, rendered with the same functions as `prompts show`), else `PromptsDir/<name>.md` via `findFileUpwards`. Display path = the resolved file path, or the bare name for built-ins.
+- An unknown *name* returns `prompt "<target>" not found` (parity with `prompts show`); an unreadable *file path* is reported as a `resolve` check failure instead, so the report header still prints.
+- Exit code is carried by exported `cli.ErrValidationFailed`; `cmd/ralph/main.go` skips the `Error:` line for it (report is already on stdout) but still exits 1. Warnings never fail.
+- Summary line always printed, warning count pluralized (`0 failed, 1 warning`, `N failed, M warnings`).
 
 **Risks/Dependencies:** Depends on Phase 4. Named-prompt resolution should reuse `prompts show` resolution, not duplicate it.
 
@@ -188,6 +192,19 @@
 - 2026-09-11: `make build` + `RALPH_PROMPTS_DIR=... ralph prompts list` / `prompts show review` - custom prompt with frontmatter `description` shows the frontmatter description in `list` and frontmatter-stripped body in `show` (CLI migration verified end-to-end).
 - 2026-09-11: Fixed pre-existing commit blocker: commit `8458895` removed the `create-readme` skill (only `github/awesome-copilot` entry) without updating `TestSkillsLockPointsToExternalRepos`; the stale expectation failed the pre-commit gate on every commit. Fixed in commit `d19cb4f`.
 
+### 2026-09-11: Phase 5 - `prompts validate <target>`
+
+- 2026-09-11: TDD RED - `go test ./internal/cli/ -run TestPromptsValidate` - failed on undefined `cli.NewPromptsValidateCommand` / `cli.ErrValidationFailed` (expected missing-feature failure).
+- 2026-09-11: `go test ./internal/... ./cmd/...` - all pass after implementation (7 new validate tests: built-in, file target all-ok, named custom, signal-less fail + content-not-leaked, unbalanced frontmatter warn, missing file target resolve-fail, unknown name error).
+- 2026-09-11: `make lint` - 0 issues (fixed dupword in fixture strings, nlreturn in `resolveValidationTarget`).
+- 2026-09-11: `make quality` - full gate passed: gosec 0 issues, go-arch-lint no warnings, coverage total 95.9% (gate ≥95%); `runPromptsValidate` 100%, `resolveValidationTarget` 92.3% (in line with file baseline).
+- 2026-09-11: `./bin/ralph prompts validate build` - all checks ok, exit 0 (spec verification 2).
+- 2026-09-11: `./bin/ralph prompts validate /tmp/ok.md` (placeholder signal + description) - all checks ok, exit 0 (verification 3).
+- 2026-09-11: `./bin/ralph prompts validate /tmp/nosignal.md` - `completion-signal` fail, `1 failed, 0 warnings`, exit 1 (verification 4).
+- 2026-09-11: `./bin/ralph prompts validate /tmp/unbalanced.md` - `frontmatter` warn, `0 failed, 1 warning`, exit 0 (verification 5).
+- 2026-09-11: `./bin/ralph prompts validate nonexistent` - `Error: prompt "nonexistent" not found`, exit 1 (verification 6).
+- 2026-09-11: `./bin/ralph prompts validate /tmp/missing.md` - `resolve` fail, exit 1; content checks not run (plan DoD "missing target").
+- 2026-09-11: `./bin/ralph prompts --help` - `validate` listed alongside `list`/`show`.
 
 ### 2026-09-11: Test Baseline
 
@@ -203,12 +220,12 @@
 | 2     | Prompts Command - List Subcommand            | ✅ Complete | 100%       |
 | 3     | Prompts Command - Show Subcommand            | ✅ Complete | 100%       |
 | 4     | Prompt Package Authoring Helpers             | ✅ Complete | 100%       |
-| 5     | `prompts validate <target>`                  | ❌ Missing  | 0%         |
+| 5     | `prompts validate <target>`                  | ✅ Complete | 100%       |
 | 6     | `prompts guide`                              | ❌ Missing  | 0%         |
 | 7     | Run-Time Missing-Signal Warning              | ❌ Missing  | 0%         |
 | 8     | `ralph skill install` (skill.md)             | ❌ Missing  | 0%         |
 
-**Remaining Effort:** Phases 5–8 (four phases). Recommended order: 5 → 7 → 6+8 (guide and skill install ship together so the guide's distribution line references a real command). All new code TDD; final gate `make quality`, then `make mutation`.
+**Remaining Effort:** Phases 6–8 (three phases). Recommended order: 7 → 6+8 (guide and skill install ship together so the guide's distribution line references a real command). All new code TDD; final gate `make quality`, then `make mutation`.
 
 ---
 
@@ -216,6 +233,7 @@
 
 - `prompts list` / `prompts show` fully implemented in `internal/cli/prompts.go` (commits `255a808`, lint fix `097de17`); registered in `cmd.go:50`. Frontmatter stripped on show.
 - `internal/prompt` authoring helpers (Phase 4, commit `15ca16a`): `HasCompletionSignal` (placeholder-aware content substring), `ValidatePromptText` (returns `[]Check` in order frontmatter/description/completion-signal), `ExtractDescription` (frontmatter `description:` first, else first non-empty non-heading body line; `""` on invalid frontmatter YAML), `Check`/`ValidationResult` types, `StatusOK/Warn/Fail` constants. `cli.hasCompletionSignal` (`run.go:277`) untouched.
+- `prompts validate <target>` fully implemented in `internal/cli/prompts.go` (commit `0dfaf6a`): `NewPromptsValidateCommand` + `runPromptsValidate` + `resolveValidationTarget`; exported `cli.ErrValidationFailed` carried to `cmd/ralph/main.go` for exit-1-without-error-line. Unknown names error like `prompts show`; unreadable file paths report a `resolve` check failure.
 - `internal/prompt.FrontMatterSettings` gained `Description`; delimiter scan refactored into `splitFrontMatter`/`opensFrontMatter` (unexported) — `ParseFrontMatter` behavior unchanged.
 - `internal/prompt.Prompt` resolution chain (`GetPrompt`): inline → stdin → explicit file → `PromptsDir` file (upwards search via `findFileUpwards`) → bundled build/plan. Banner written for file-sourced prompts.
 - `internal/prompt.ParseFrontMatter` (`frontmatter.go`) parses `model`/`agentMode` overrides — reusable for the `frontmatter`/`description` checks.
