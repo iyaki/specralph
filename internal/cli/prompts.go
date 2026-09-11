@@ -140,24 +140,13 @@ func extractDescription(path string) string {
 		return "(cannot read file)"
 	}
 
-	// Parse frontmatter to get clean body
-	_, body, err := prompt.ParseFrontMatter(string(content))
-	if err != nil {
+	// Invalid frontmatter yaml is worth distinguishing from a missing description.
+	if _, _, err := prompt.ParseFrontMatter(string(content)); err != nil {
 		return "(invalid frontmatter)"
 	}
 
-	// Get first non-empty, non-heading line
-	lines := strings.Split(body, "\n")
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-		if len(trimmed) > 0 && trimmed[0] == '#' {
-			continue
-		}
-
-		return trimmed
+	if desc := prompt.ExtractDescription(string(content)); desc != "" {
+		return desc
 	}
 
 	return "(no description)"

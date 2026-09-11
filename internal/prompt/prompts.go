@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/iyaki/specralph/internal/config"
 )
 
@@ -403,4 +405,113 @@ func findFileUpwards(path string) string {
 	}
 
 	return ""
+}
+
+// Completion signal forms accepted in prompt content: the placeholder, which
+// the loop replaces at run time, and the literal completion tag.
+const (
+	completionSignalPlaceholder = "<COMPLETION_SIGNAL>"
+	completionSignalLiteral     = "<promise>COMPLETE</promise>"
+)
+
+// Validation check statuses.
+const (
+	StatusOK   = "ok"
+	StatusWarn = "warn"
+	StatusFail = "fail"
+)
+
+// Check is the outcome of a single static validation check.
+type Check struct {
+	Name    string
+	Status  string
+	Message string
+}
+
+// ValidationResult pairs a resolved prompt path with its check outcomes.
+type ValidationResult struct {
+	Path   string
+	Checks []Check
+}
+
+// HasCompletionSignal reports whether prompt content contains either
+// completion signal form (substring match on content). The loop's line-exact
+// detection of agent output is a separate concern and lives in cli.
+func HasCompletionSignal(text string) bool {
+	return strings.Contains(text, completionSignalPlaceholder) ||
+		strings.Contains(text, completionSignalLiteral)
+}
+
+// ExtractDescription returns the frontmatter "description" value when
+// non-empty, otherwise the first non-empty, non-heading body line, otherwise
+// an empty string.
+func ExtractDescription(text string) string {
+	settings, body, err := ParseFrontMatter(text)
+	if err != nil {
+		return ""
+	}
+	if desc := strings.TrimSpace(settings.Description); desc != "" {
+		return desc
+	}
+	for _, line := range strings.Split(body, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || trimmed[0] == '#' || trimmed == frontMatterDelim {
+			continue
+		}
+
+		return trimmed
+	}
+
+	return ""
+}
+
+// ValidatePromptText runs static checks on prompt content: frontmatter
+// balance and declared description, extractable description, and completion
+// signal. All checks run; none short-circuits. Target resolution and the
+// resolve check stay in the CLI layer.
+func ValidatePromptText(text string) []Check {
+	var checks []Check
+
+	frontmatter := Check{Name: "frontmatter", Status: StatusOK}
+	if fm, _, ok := splitFrontMatter(text); ok {
+		var raw map[string]any
+		if err := yaml.Unmarshal([]byte(fm), &raw); err == nil {
+			if v, exists := raw["description"]; exists && descriptionIsEmpty(v) {
+				frontmatter = Check{Name: "frontmatter", Status: StatusWarn, Message: "frontmatter description is empty"}
+			}
+		}
+	} else if opensFrontMatter(text) {
+		frontmatter = Check{Name: "frontmatter", Status: StatusWarn, Message: "unbalanced frontmatter delimiters"}
+	}
+	checks = append(checks, frontmatter)
+
+	if ExtractDescription(text) == "" {
+		checks = append(checks, Check{Name: "description", Status: StatusWarn, Message: "no description line found"})
+	} else {
+		checks = append(checks, Check{Name: "description", Status: StatusOK})
+	}
+
+	if HasCompletionSignal(text) {
+		checks = append(checks, Check{Name: "completion-signal", Status: StatusOK})
+	} else {
+		checks = append(checks, Check{Name: "completion-signal", Status: StatusFail,
+			Message: "neither <COMPLETION_SIGNAL> nor <promise>COMPLETE</promise> found"})
+	}
+
+	return checks
+}
+
+// descriptionIsEmpty reports whether a frontmatter description value is null or blank.
+func descriptionIsEmpty(v any) bool {
+	switch t := v.(type) {
+	case nil:
+
+		return true
+	case string:
+
+		return strings.TrimSpace(t) == ""
+	default:
+
+		return false
+	}
 }

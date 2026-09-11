@@ -251,3 +251,186 @@ func TestGetPromptNoFrontMatter(t *testing.T) {
 		t.Errorf("expected empty overrides, got %v", override)
 	}
 }
+
+func TestHasCompletionSignal(t *testing.T) {
+	tests := []struct {
+		name     string
+		text     string
+		expected bool
+	}{
+		{name: "placeholder", text: "Stop when done with <COMPLETION_SIGNAL>", expected: true},
+		{name: "literal", text: "<promise>COMPLETE</promise>", expected: true},
+		{name: "literal inside sentence", text: "Reply with <promise>COMPLETE</promise> when finished.", expected: true},
+		{name: "absent", text: "# Objective\n\nDo the work.", expected: false},
+		{name: "empty", text: "", expected: false},
+		{name: "partial placeholder only", text: "COMPLETION_SIGNAL without brackets", expected: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := prompt.HasCompletionSignal(tc.text); got != tc.expected {
+				t.Errorf("HasCompletionSignal(%q) = %v, want %v", tc.text, got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestExtractDescription(t *testing.T) {
+	tests := []struct {
+		name     string
+		text     string
+		expected string
+	}{
+		{
+			name:     "frontmatter description wins",
+			text:     "---\ndescription: Author prompts with ease\n---\n\n# Objective\n\nBody line here.\n",
+			expected: "Author prompts with ease",
+		},
+		{
+			name:     "empty frontmatter description falls back to body",
+			text:     "---\ndescription:\n---\n\n# Objective\n\nFirst body line.\n",
+			expected: "First body line.",
+		},
+		{
+			name:     "no frontmatter uses first non-empty non-heading body line",
+			text:     "# Objective\n\n   \nFirst real line.\nSecond line.\n",
+			expected: "First real line.",
+		},
+		{
+			name:     "no description anywhere",
+			text:     "# Only A Heading\n\n## Another\n",
+			expected: "",
+		},
+		{
+			name:     "empty text",
+			text:     "",
+			expected: "",
+		},
+		{
+			name:     "invalid frontmatter yaml",
+			text:     "---\ndescription: [unclosed\n---\n\nBody line.\n",
+			expected: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := prompt.ExtractDescription(tc.text); got != tc.expected {
+				t.Errorf("ExtractDescription(%q) = %q, want %q", tc.text, got, tc.expected)
+			}
+		})
+	}
+}
+
+var validatePromptTextTests = []struct {
+	name     string
+	text     string
+	expected []prompt.Check
+}{
+	{
+		name: "fully valid prompt",
+		text: "---\ndescription: A good prompt\n---\n\n# Objective\n\nRun tasks until <promise>COMPLETE</promise>.\n",
+		expected: []prompt.Check{
+			{Name: "frontmatter", Status: prompt.StatusOK, Message: ""},
+			{Name: "description", Status: prompt.StatusOK, Message: ""},
+			{Name: "completion-signal", Status: prompt.StatusOK, Message: ""},
+		},
+	},
+	{
+		name: "missing completion signal fails",
+		text: "---\ndescription: No signal\n---\n\n# Objective\n\nDo work forever.\n",
+		expected: []prompt.Check{
+			{Name: "frontmatter", Status: prompt.StatusOK, Message: ""},
+			{Name: "description", Status: prompt.StatusOK, Message: ""},
+			{Name: "completion-signal", Status: prompt.StatusFail,
+				Message: "neither <COMPLETION_SIGNAL> nor <promise>COMPLETE</promise> found"},
+		},
+	},
+	{
+		name: "unbalanced frontmatter warns and later checks still run",
+		text: "---\ndescription: Broken delimiters\n\n# Objective\n\n<promise>COMPLETE</promise>\n",
+		expected: []prompt.Check{
+			{Name: "frontmatter", Status: prompt.StatusWarn, Message: "unbalanced frontmatter delimiters"},
+			{Name: "description", Status: prompt.StatusOK, Message: ""},
+			{Name: "completion-signal", Status: prompt.StatusOK, Message: ""},
+		},
+	},
+	{
+		name: "empty frontmatter description warns frontmatter but description ok via body",
+		text: "---\ndescription:\n---\n\n# Objective\n\nBody line.\n<COMPLETION_SIGNAL>\n",
+		expected: []prompt.Check{
+			{Name: "frontmatter", Status: prompt.StatusWarn, Message: "frontmatter description is empty"},
+			{Name: "description", Status: prompt.StatusOK, Message: ""},
+			{Name: "completion-signal", Status: prompt.StatusOK, Message: ""},
+		},
+	},
+	{
+		name: "signal placeholder line counts as body line",
+		text: "# Objective\n\n<COMPLETION_SIGNAL>\n",
+		expected: []prompt.Check{
+			{Name: "frontmatter", Status: prompt.StatusOK, Message: ""},
+			{Name: "description", Status: prompt.StatusOK, Message: ""},
+			{Name: "completion-signal", Status: prompt.StatusOK, Message: ""},
+		},
+	},
+	{
+		name: "heading-only prompt warns description and fails signal",
+		text: "# Only A Heading\n",
+		expected: []prompt.Check{
+			{Name: "frontmatter", Status: prompt.StatusOK, Message: ""},
+			{Name: "description", Status: prompt.StatusWarn, Message: "no description line found"},
+			{Name: "completion-signal", Status: prompt.StatusFail,
+				Message: "neither <COMPLETION_SIGNAL> nor <promise>COMPLETE</promise> found"},
+		},
+	},
+	{
+		name: "no frontmatter at all is not a frontmatter problem",
+		text: "# Objective\n\nFirst line.\n<COMPLETION_SIGNAL>\n",
+		expected: []prompt.Check{
+			{Name: "frontmatter", Status: prompt.StatusOK, Message: ""},
+			{Name: "description", Status: prompt.StatusOK, Message: ""},
+			{Name: "completion-signal", Status: prompt.StatusOK, Message: ""},
+		},
+	},
+	{
+		name: "non-string frontmatter description does not warn frontmatter",
+		text: "---\ndescription: [not, a, string]\n---\n\nBody line.\n<COMPLETION_SIGNAL>\n",
+		expected: []prompt.Check{
+			{Name: "frontmatter", Status: prompt.StatusOK, Message: ""},
+			{Name: "description", Status: prompt.StatusWarn, Message: "no description line found"},
+			{Name: "completion-signal", Status: prompt.StatusOK, Message: ""},
+		},
+	},
+	{
+		name: "bare opening delimiter is unbalanced frontmatter",
+		text: "---",
+		expected: []prompt.Check{
+			{Name: "frontmatter", Status: prompt.StatusWarn, Message: "unbalanced frontmatter delimiters"},
+			{Name: "description", Status: prompt.StatusWarn, Message: "no description line found"},
+			{Name: "completion-signal", Status: prompt.StatusFail,
+				Message: "neither <COMPLETION_SIGNAL> nor <promise>COMPLETE</promise> found"},
+		},
+	},
+}
+
+func TestValidatePromptText(t *testing.T) {
+	for _, tc := range validatePromptTextTests {
+		t.Run(tc.name, func(t *testing.T) {
+			assertChecks(t, prompt.ValidatePromptText(tc.text), tc.expected)
+		})
+	}
+}
+
+func assertChecks(t *testing.T, got, want []prompt.Check) {
+	t.Helper()
+
+	if len(got) != len(want) {
+		t.Fatalf("expected %d checks, got %d: %+v", len(want), len(got), got)
+	}
+
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("check[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}
