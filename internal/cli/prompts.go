@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -23,6 +24,7 @@ func NewPromptsCommand() *cobra.Command {
 
 	cmd.AddCommand(NewPromptsListCommand())
 	cmd.AddCommand(NewPromptsShowCommand())
+	cmd.AddCommand(NewPromptsValidateCommand())
 
 	return cmd
 }
@@ -62,6 +64,110 @@ func NewPromptsShowCommand() *cobra.Command {
 			return runPromptsShow(cmd.OutOrStdout(), &cfg, promptName)
 		},
 	}
+}
+
+// ErrValidationFailed signals that prompts validate reported at least one
+// failing check. The report itself is on stdout, so the entrypoint exits 1
+// without printing an extra error line.
+var ErrValidationFailed = errors.New("validation failed")
+
+// errTargetNotFound marks a named target that matches neither a built-in nor
+// a custom prompt file.
+var errTargetNotFound = errors.New("target not found")
+
+// NewPromptsValidateCommand creates the prompts validate subcommand.
+func NewPromptsValidateCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "validate <target>",
+		Short: "Validate a prompt file or named prompt",
+		Long:  `Run static checks on a prompt file or named prompt and report the outcome of each check.`,
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var cfg config.Config
+			if err := cfg.LoadConfig(); err != nil {
+				return fmt.Errorf("failed to load config: %w", err)
+			}
+
+			return runPromptsValidate(cmd.OutOrStdout(), &cfg, args[0])
+		},
+	}
+}
+
+func runPromptsValidate(output io.Writer, cfg *config.Config, target string) error {
+	path, content, resolveErr := resolveValidationTarget(cfg, target)
+	if errors.Is(resolveErr, errTargetNotFound) {
+		return fmt.Errorf("prompt %q not found", target)
+	}
+
+	_, _ = fmt.Fprintln(output, path)
+
+	var checks []prompt.Check
+	if resolveErr != nil {
+		checks = append(checks, prompt.Check{Name: "resolve", Status: prompt.StatusFail, Message: resolveErr.Error()})
+	} else {
+		checks = append(checks, prompt.Check{Name: "resolve", Status: prompt.StatusOK})
+		checks = append(checks, prompt.ValidatePromptText(content)...)
+	}
+
+	failed, warnings := 0, 0
+	for _, check := range checks {
+		line := fmt.Sprintf("%-9s%s", check.Status, check.Name)
+		if check.Message != "" {
+			line += ": " + check.Message
+		}
+		_, _ = fmt.Fprintln(output, line)
+
+		switch check.Status {
+		case prompt.StatusFail:
+			failed++
+		case prompt.StatusWarn:
+			warnings++
+		}
+	}
+
+	summary := fmt.Sprintf("%d failed, %d warning", failed, warnings)
+	if warnings != 1 {
+		summary += "s"
+	}
+	_, _ = fmt.Fprintln(output, summary)
+
+	if failed > 0 {
+		return ErrValidationFailed
+	}
+
+	return nil
+}
+
+// resolveValidationTarget resolves the validate target to a display path and
+// its content: a file path when the target ends in .md or contains a path
+// separator, otherwise a prompt name (built-in first, then custom files in
+// PromptsDir).
+func resolveValidationTarget(cfg *config.Config, target string) (string, string, error) {
+	isFilePath := strings.HasSuffix(target, ".md") ||
+		strings.Contains(target, "/") ||
+		strings.Contains(target, `\`)
+	if isFilePath {
+		content, err := os.ReadFile(target) // #nosec G304 -- path is the user-provided validate target
+
+		return target, string(content), err
+	}
+
+	switch target {
+	case "build":
+		return target, prompt.BuildPrompt(cfg), nil
+	case "plan":
+		return target, prompt.PlanPrompt(cfg, ""), nil
+	}
+
+	promptPath := cfg.PromptsDir + "/" + target + ".md"
+	foundPath := findFileUpwards(promptPath)
+	if foundPath == "" {
+		return "", "", errTargetNotFound
+	}
+
+	content, err := os.ReadFile(foundPath) // #nosec G304 -- path is from findFileUpwards
+
+	return foundPath, string(content), err
 }
 
 type promptInfo struct {

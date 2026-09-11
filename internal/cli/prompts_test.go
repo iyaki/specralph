@@ -2,6 +2,7 @@ package cli_test
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -324,5 +325,275 @@ This content should be displayed without frontmatter.
 	}
 	if !strings.Contains(output, "This content should be displayed without frontmatter.") {
 		t.Errorf("expected output to contain body, got %q", output)
+	}
+}
+
+func TestPromptsValidateBuiltIn(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	tmp := t.TempDir()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(wd)
+	})
+	t.Setenv("HOME", t.TempDir())
+
+	cmd := cli.NewPromptsValidateCommand()
+	cmd.SetArgs([]string{"build"})
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("expected built-in prompt to validate, got: %v", err)
+	}
+
+	output := out.String()
+	for _, want := range []string{
+		"build\n",
+		"ok       resolve",
+		"ok       frontmatter",
+		"ok       description",
+		"ok       completion-signal",
+		"0 failed, 0 warnings",
+	} {
+		if !strings.Contains(output, want) {
+			t.Errorf("expected output to contain %q, got %q", want, output)
+		}
+	}
+}
+
+func TestPromptsValidateFileTargetAllOk(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	tmp := t.TempDir()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(wd)
+	})
+	t.Setenv("HOME", t.TempDir())
+
+	target := filepath.Join(tmp, "review.md")
+	content := "---\ndescription: Review the plan\n---\n# Review Prompt\n\n" +
+		"Review the code until <promise>COMPLETE</promise>.\n"
+	if err := os.WriteFile(target, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write prompt file: %v", err)
+	}
+
+	cmd := cli.NewPromptsValidateCommand()
+	cmd.SetArgs([]string{target})
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("expected valid file to pass, got: %v", err)
+	}
+
+	output := out.String()
+	for _, want := range []string{
+		target + "\n",
+		"ok       resolve",
+		"ok       completion-signal",
+		"0 failed, 0 warnings",
+	} {
+		if !strings.Contains(output, want) {
+			t.Errorf("expected output to contain %q, got %q", want, output)
+		}
+	}
+}
+
+func TestPromptsValidateNamedCustomPrompt(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	tmp := t.TempDir()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(wd)
+	})
+
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	promptsDir := filepath.Join(homeDir, ".ralph")
+	if err := os.MkdirAll(promptsDir, 0755); err != nil {
+		t.Fatalf("failed to create prompts dir: %v", err)
+	}
+	promptFile := filepath.Join(promptsDir, "review.md")
+	content := "# Review\n\nKeep going until <COMPLETION_SIGNAL>.\n"
+	if err := os.WriteFile(promptFile, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write prompt file: %v", err)
+	}
+
+	cmd := cli.NewPromptsValidateCommand()
+	cmd.SetArgs([]string{"review"})
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("expected named prompt to validate, got: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, promptFile+"\n") {
+		t.Errorf("expected resolved path header, got %q", output)
+	}
+	if !strings.Contains(output, "ok       completion-signal") {
+		t.Errorf("expected placeholder signal to pass, got %q", output)
+	}
+}
+
+func TestPromptsValidateMissingSignalFails(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	tmp := t.TempDir()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(wd)
+	})
+	t.Setenv("HOME", t.TempDir())
+
+	target := filepath.Join(tmp, "review.md")
+	content := "---\ndescription: Review prompt\n---\n# Review Prompt\n\nReview the code.\n"
+	if err := os.WriteFile(target, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write prompt file: %v", err)
+	}
+
+	cmd := cli.NewPromptsValidateCommand()
+	cmd.SetArgs([]string{target})
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	err = cmd.Execute()
+	if !errors.Is(err, cli.ErrValidationFailed) {
+		t.Fatalf("expected ErrValidationFailed, got: %v", err)
+	}
+
+	output := out.String()
+	for _, want := range []string{
+		"fail     completion-signal: neither <COMPLETION_SIGNAL> nor <promise>COMPLETE</promise> found",
+		"1 failed, 0 warnings",
+		"ok       description",
+	} {
+		if !strings.Contains(output, want) {
+			t.Errorf("expected output to contain %q, got %q", want, output)
+		}
+	}
+	if strings.Contains(output, "Review the code.") {
+		t.Errorf("prompt content must not appear in output, got %q", output)
+	}
+}
+
+func TestPromptsValidateUnbalancedFrontmatterWarns(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	tmp := t.TempDir()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(wd)
+	})
+	t.Setenv("HOME", t.TempDir())
+
+	target := filepath.Join(tmp, "review.md")
+	content := "---\ndescription: Broken delimiters\n\n# Review\n\nUntil <promise>COMPLETE</promise>.\n"
+	if err := os.WriteFile(target, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write prompt file: %v", err)
+	}
+
+	cmd := cli.NewPromptsValidateCommand()
+	cmd.SetArgs([]string{target})
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("expected warnings not to fail validation, got: %v", err)
+	}
+
+	output := out.String()
+	for _, want := range []string{
+		"warn     frontmatter: unbalanced frontmatter delimiters",
+		"0 failed, 1 warning",
+	} {
+		if !strings.Contains(output, want) {
+			t.Errorf("expected output to contain %q, got %q", want, output)
+		}
+	}
+}
+
+func TestPromptsValidateMissingFileTarget(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	tmp := t.TempDir()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(wd)
+	})
+	t.Setenv("HOME", t.TempDir())
+
+	target := filepath.Join(tmp, "missing.md")
+
+	cmd := cli.NewPromptsValidateCommand()
+	cmd.SetArgs([]string{target})
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	err = cmd.Execute()
+	if !errors.Is(err, cli.ErrValidationFailed) {
+		t.Fatalf("expected ErrValidationFailed, got: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "fail     resolve") {
+		t.Errorf("expected resolve check to fail, got %q", output)
+	}
+	if strings.Contains(output, "completion-signal") {
+		t.Errorf("content checks must not run without content, got %q", output)
+	}
+}
+
+func TestPromptsValidateUnknownNameErrors(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	tmp := t.TempDir()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(wd)
+	})
+	t.Setenv("HOME", t.TempDir())
+
+	cmd := cli.NewPromptsValidateCommand()
+	cmd.SetArgs([]string{"nonexistent"})
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	err = cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), `prompt "nonexistent" not found`) {
+		t.Fatalf("expected not-found error, got: %v", err)
 	}
 }
