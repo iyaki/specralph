@@ -141,6 +141,8 @@ For custom prompt files, the description is extracted using the following preced
 
 - [prompts.md](../prompts.md) — Prompt resolution and content generation.
 - [run.md](run.md) — Using prompts with the `run` command.
+- [prompts-authoring.md](prompts-authoring.md) — `prompts guide` and `prompts validate` for authoring custom prompts.
+
 ## Implementation Notes
 
 The prompts command was implemented with the following features:

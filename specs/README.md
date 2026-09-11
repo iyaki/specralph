@@ -31,7 +31,9 @@ Design docs and technical specifications
 - [commands/help.md](commands/help.md) — Get help about commands
 - [commands/init.md](commands/init.md) — Initialize Ralph configuration
 - [commands/prompts.md](commands/prompts.md) — List and view prompts
+- [commands/prompts-authoring.md](commands/prompts-authoring.md) — Guide and validation for authoring prompts
 - [commands/run.md](commands/run.md) — Run prompt loop
+- [commands/skill.md](commands/skill.md) — Install the bundled prompt-authoring skill
 - [commands/version.md](commands/version.md) — Show version info
 
 ### Agents Implementations
