@@ -13,29 +13,43 @@ const (
 
 // FrontMatterSettings holds the configuration extracted from the front matter.
 type FrontMatterSettings struct {
-	Model     string `yaml:"model,omitempty"`
-	AgentMode string `yaml:"agent-mode,omitempty"`
+	Model       string `yaml:"model,omitempty"`
+	AgentMode   string `yaml:"agent-mode,omitempty"`
+	Description string `yaml:"description,omitempty"`
 }
 
 // ParseFrontMatter parses the YAML front matter from a markdown string.
 // It returns the parsed settings, the body with front matter stripped, and an error if parsing fails.
 func ParseFrontMatter(content string) (*FrontMatterSettings, string, error) {
-	// Front matter must start with "---" at the very beginning of the file.
-	if !strings.HasPrefix(content, frontMatterDelim) {
+	frontMatter, body, ok := splitFrontMatter(content)
+	if !ok {
 		return &FrontMatterSettings{}, content, nil
 	}
 
-	// It must be followed by a newline (or end of file, though empty front matter is weird)
-	// If content is just "---", it's not valid front matter with a body usually, but let's check length.
-	if len(content) > frontMatterDelimLen {
-		charAfter := content[frontMatterDelimLen]
-		if charAfter != '\n' && charAfter != '\r' {
-			// "---" is followed by something other than newline, e.g. "---foo"
-			return &FrontMatterSettings{}, content, nil
-		}
-	} else {
-		// Content is exactly "---", no closing, treat as text
-		return &FrontMatterSettings{}, content, nil
+	var settings FrontMatterSettings
+	if err := yaml.Unmarshal([]byte(frontMatter), &settings); err != nil {
+		return nil, "", err
+	}
+
+	return &settings, strings.TrimSpace(body), nil
+}
+
+// splitFrontMatter splits content into raw front matter and body. ok is false
+// when content does not open with a front matter delimiter or the closing
+// delimiter is missing (both cases are treated as plain text).
+func splitFrontMatter(content string) (frontMatter, body string, ok bool) {
+	// Front matter must start with "---" at the very beginning of the file.
+	if !strings.HasPrefix(content, frontMatterDelim) {
+		return "", content, false
+	}
+
+	// It must be followed by a newline. Content is exactly "---" (no closing),
+	// or the delimiter is followed by something else (e.g. "---foo"): plain text.
+	if len(content) <= frontMatterDelimLen {
+		return "", content, false
+	}
+	if charAfter := content[frontMatterDelimLen]; charAfter != '\n' && charAfter != '\r' {
+		return "", content, false
 	}
 
 	// Search for the closing delimiter.
@@ -45,7 +59,7 @@ func ParseFrontMatter(content string) (*FrontMatterSettings, string, error) {
 
 	if idxLF == -1 {
 		// No closing delimiter found
-		return &FrontMatterSettings{}, content, nil
+		return "", content, false
 	}
 
 	closeIdx := idxLF
@@ -57,21 +71,19 @@ func ParseFrontMatter(content string) (*FrontMatterSettings, string, error) {
 		delimLen = 5
 	}
 
-	// Extract front matter content
-	frontMatter := rest[:closeIdx]
+	return rest[:closeIdx], content[frontMatterDelimLen+closeIdx+delimLen:], true
+}
 
-	// Extract body
-	// The body starts after "\n---" or "\r\n---"
-	bodyStart := frontMatterDelimLen + closeIdx + delimLen
-	body := ""
-	if bodyStart < len(content) {
-		body = content[bodyStart:]
+// opensFrontMatter reports whether content begins with a front matter opening
+// delimiter, even if it is never closed.
+func opensFrontMatter(content string) bool {
+	if !strings.HasPrefix(content, frontMatterDelim) {
+		return false
 	}
-
-	var settings FrontMatterSettings
-	if err := yaml.Unmarshal([]byte(frontMatter), &settings); err != nil {
-		return nil, "", err
+	if len(content) == frontMatterDelimLen {
+		return true
 	}
+	charAfter := content[frontMatterDelimLen]
 
-	return &settings, strings.TrimSpace(body), nil
+	return charAfter == '\n' || charAfter == '\r'
 }
