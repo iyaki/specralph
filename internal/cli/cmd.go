@@ -48,6 +48,7 @@ For extended documentation, examples, and configuration options, visit https://g
 	cmd.AddCommand(NewRunCommand())
 	cmd.AddCommand(NewVersionCommand())
 	cmd.AddCommand(NewPromptsCommand())
+	cmd.AddCommand(NewSkillCommand())
 
 	return cmd
 }
