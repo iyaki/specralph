@@ -75,11 +75,6 @@ Agent support Pull Requests are always welcomed. To add or update agent integrat
 Requirements:
 
 - A supported agent CLI in `PATH`
-- Go `1.25` if you are building from source
-
-Prebuilt binaries are published on [GitHub Releases](https://github.com/iyaki/specralph/releases). The latest release page is https://github.com/iyaki/specralph/releases/latest.
-
-## Quick Install (Recommended)
 
 ### One-line install (Linux/macOS)
 
@@ -88,6 +83,8 @@ curl -fsSL https://raw.githubusercontent.com/iyaki/specralph/main/scripts/instal
 ```
 
 ### Manual download
+
+Binaries are available for Linux, macOS, and Windows. Download the appropriate binary for your platform and move it to a directory in your `PATH`.
 
 1. Visit [GitHub Releases](https://github.com/iyaki/specralph/releases/latest)
 2. Download the binary for your platform
@@ -99,10 +96,13 @@ curl -fsSL https://raw.githubusercontent.com/iyaki/specralph/main/scripts/instal
 
 ### Devcontainer feature:
 
-`ghcr.io/iyaki/devcontainer-features/ralph:1`
+`ghcr.io/iyaki/devcontainer-features/ralph:1` - [Link to feature repository](https://github.com/iyaki/devcontainer-features/blob/main/src/ralph/)
 
 ### Build from source
 
+Requirements:
+
+- Go `1.25` if you are building from source
 
 ```bash
 # Clone the repository and then:
