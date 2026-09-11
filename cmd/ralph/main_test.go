@@ -108,7 +108,6 @@ func TestSkillsLockPointsToExternalRepos(t *testing.T) {
 	}
 
 	expected := []string{
-		"github/awesome-copilot",
 		"iyaki/opencode-base-template",
 		"anthropics/skills",
 		"obra/superpowers",
