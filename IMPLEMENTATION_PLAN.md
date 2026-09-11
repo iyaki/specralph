@@ -1,6 +1,6 @@
 # Implementation Plan (commands/prompt-authoring)
 
-**Status:** Prompt Discovery Complete (help/list/show verified); Authoring Tooling Not Started (3/8 phases)
+**Status:** Prompt Discovery Complete; Authoring Helpers Complete (4/8 phases)
 **Last Updated:** 2026-09-11
 **Primary Spec:** [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md), [specs/commands/skill.md](specs/commands/skill.md)
 
@@ -13,7 +13,7 @@
 | Help / run / init / version | [specs/commands/help.md](specs/commands/help.md), [run.md](specs/commands/run.md), [init.md](specs/commands/init.md), [version.md](specs/commands/version.md) | `internal/cli/cmd.go`, `run.go`, `init.go`, `version.go` | —                                                                | ✅ Complete   |
 | `prompts list` / `prompts show` | [specs/commands/prompts.md](specs/commands/prompts.md)      | `internal/cli/prompts.go`             | —                                                                | ✅ Complete   |
 | Prompt resolution chain     | [specs/prompts.md](specs/prompts.md)                            | `internal/prompt/prompts.go`, `frontmatter.go` | —                                                               | ✅ Complete   |
-| Prompt authoring helpers    | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/prompt/prompts.go`   | —                                                                | ❌ Missing    |
+| Prompt authoring helpers    | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/prompt/prompts.go`, `frontmatter.go` | —                                                               | ✅ Complete   |
 | `prompts guide`             | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | guide fixture (go:embed)                                         | ❌ Missing    |
 | `prompts validate`          | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | —                                                                | ❌ Missing    |
 | Run-time missing-signal warning | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/run.go`        | —                                                                | ❌ Missing    |
@@ -31,21 +31,27 @@
 
 **Goal:** Shared, testable content checks in `internal/prompt` so both `validate` and the run-time warning use one implementation.
 
-**Status:** ❌ Not started
+**Status:** ✅ Complete
 
 **Paths:**
 - `internal/prompt/prompts.go`
 - `internal/prompt/prompts_test.go` / `prompts_internal_test.go`
 
 **Checklist:**
-- [ ] `internal/prompt.HasCompletionSignal(text string) bool` — true if `<COMPLETION_SIGNAL>` or `<promise>COMPLETE</promise>` present (placeholder-aware; substring match on prompt *content*)
-- [ ] `Check` type: `Name`, `Status` (`ok|warn|fail`), `Message`
-- [ ] `ValidationResult` type: `Path`, `Checks []Check`
-- [ ] `internal/prompt.ValidatePromptText(text string) []Check` — frontmatter balance check, description check, completion-signal check
-- [ ] Description extraction: extend `internal/cli/prompts.go:extractDescription` (body-line-only, `:137`) into prompt package supporting frontmatter `description:` OR first non-empty non-heading body line; migrate CLI caller
-- [ ] Keep `cli.hasCompletionSignal` (`run.go:277`, line-exact agent-output match) untouched — `RunLoop` literal detection must not change (spec constraint)
+- [x] `internal/prompt.HasCompletionSignal(text string) bool` — true if `<COMPLETION_SIGNAL>` or `<promise>COMPLETE</promise>` present (placeholder-aware; substring match on prompt *content*)
+- [x] `Check` type: `Name`, `Status` (`ok|warn|fail`), `Message`
+- [x] `ValidationResult` type: `Path`, `Checks []Check`
+- [x] `internal/prompt.ValidatePromptText(text string) []Check` — frontmatter balance check, description check, completion-signal check
+- [x] Description extraction: extend `internal/cli/prompts.go:extractDescription` (body-line-only, `:137`) into prompt package supporting frontmatter `description:` OR first non-empty non-heading body line; migrate CLI caller
+- [x] Keep `cli.hasCompletionSignal` (`run.go:277`, line-exact agent-output match) untouched — `RunLoop` literal detection must not change (spec constraint)
 
 **Definition of Done:** failing tests written first; `make test` passes; helpers covered by table-driven tests (both signal forms, mixed, absent).
+
+**Implementation notes (2026-09-11):**
+
+- `ValidatePromptText` returns all three checks in spec order (`frontmatter`, `description`, `completion-signal`); `resolve` stays a Phase 5 CLI concern.
+- Frontmatter balance reuses the delimiter scan: `ParseFrontMatter` was refactored onto new unexported `splitFrontMatter`/`opensFrontMatter` helpers (no behavior change to existing callers; `FrontMatterSettings` gained `description`).
+- `ExtractDescription` returns `""` on invalid frontmatter YAML; the CLI `extractDescription` keeps the distinct `(invalid frontmatter)` sentinel by checking `ParseFrontMatter` first, so `prompts list` output is unchanged.
 
 **Risks/Dependencies:** None — stdlib only. Do not conflate the new content check with the existing output-line check.
 
@@ -164,11 +170,24 @@
 
 - 2026-09-11: `git log --oneline -- specs/` - confirmed `1a7512f docs(specs): add prompt authoring and skill install specs` added `specs/commands/prompts-authoring.md`, `specs/commands/skill.md`, `.agents/skills/specralph-prompts/SKILL.md`, plus cross-links into `specs/README.md` and `specs/commands/prompts.md`. Both new specs are `Status: Proposed`.
 - 2026-09-11: read `internal/cli/prompts.go` - only `list` + `show` subcommands registered (`:24-25`); no `guide`, no `validate`.
+
 - 2026-09-11: grep `internal/` for `HasCompletionSignal|COMPLETION_SIGNAL` - `cli.HasCompletionSignal` exists only as literal agent-output check wrapper (`run.go:336-339` over `:277`); no placeholder-aware prompt-content check; no `ValidatePromptText`; no run-time warning anywhere.
 - 2026-09-11: read `internal/prompt/prompts.go` - resolution chain verified: `customPrompt` (inline) → `stdinPrompt` → `explicitPromptFile` (`cfg.PromptFile`) → `promptFromDir` (`PromptsDir/<name>.md`, `findFileUpwards`) → `bundledPrompt`; `ParseFrontMatter` exists in `internal/prompt/frontmatter.go`.
 - 2026-09-11: read `internal/cli/cmd.go:46-51` - registered commands: `init`, `run`, `version`, `prompts`; no `skill` command; `internal/cli/skill.go` absent (glob confirmed).
 - 2026-09-11: read `internal/cli/prompts.go:137-164` - `extractDescription` is body-line-only (no frontmatter `description:` support), lives in CLI layer → Phase 4 migration needed.
 - 2026-09-11: read `IMPLEMENTATION_PLAN.md` (prior) - stale: scoped to `commands/help`, dated 2026-06-19, contradicts code on `prompts show` → regenerated for current scope.
+
+### 2026-09-11: Phase 4 - Prompt Package Authoring Helpers
+
+- 2026-09-11: TDD RED - `go test ./internal/prompt/` - failed on undefined `prompt.HasCompletionSignal` / `ExtractDescription` / `Check` / `ValidatePromptText` (expected missing-feature failure).
+- 2026-09-11: `go test ./internal/prompt/ ./internal/cli/` - all pass after implementation; legacy frontmatter tests unchanged.
+- 2026-09-11: `make lint` - 0 issues (fixed funlen/lll/mnd/nlreturn in new code: table hoisted to package var, long messages wrapped, capacity hint dropped).
+- 2026-09-11: `make test-coverage` - total 95.8% (gate ≥95%); `internal/prompt` at 97.0%, all new helpers at 100%. The only failing package is `cmd/ralph` — pre-existing `TestSkillsLockPointsToExternalRepos` (verified failing on clean tree via `git stash`).
+- 2026-09-11: `make test-race` - no data races in `internal/...` (same pre-existing `cmd/ralph` failure, unrelated).
+- 2026-09-11: `make security` - 0 issues; `make arch` - no warnings.
+- 2026-09-11: `make build` + `RALPH_PROMPTS_DIR=... ralph prompts list` / `prompts show review` - custom prompt with frontmatter `description` shows the frontmatter description in `list` and frontmatter-stripped body in `show` (CLI migration verified end-to-end).
+- 2026-09-11: Fixed pre-existing commit blocker: commit `8458895` removed the `create-readme` skill (only `github/awesome-copilot` entry) without updating `TestSkillsLockPointsToExternalRepos`; the stale expectation failed the pre-commit gate on every commit. Fixed in commit `d19cb4f`.
+
 
 ### 2026-09-11: Test Baseline
 
@@ -183,19 +202,21 @@
 | 1     | Help Command Verification                    | ✅ Complete | 100%       |
 | 2     | Prompts Command - List Subcommand            | ✅ Complete | 100%       |
 | 3     | Prompts Command - Show Subcommand            | ✅ Complete | 100%       |
-| 4     | Prompt Package Authoring Helpers             | ❌ Missing  | 0%         |
+| 4     | Prompt Package Authoring Helpers             | ✅ Complete | 100%       |
 | 5     | `prompts validate <target>`                  | ❌ Missing  | 0%         |
 | 6     | `prompts guide`                              | ❌ Missing  | 0%         |
 | 7     | Run-Time Missing-Signal Warning              | ❌ Missing  | 0%         |
 | 8     | `ralph skill install` (skill.md)             | ❌ Missing  | 0%         |
 
-**Remaining Effort:** Phases 4–8 (five phases). Recommended order: 4 → 5 → 7 → 6+8 (guide and skill install ship together so the guide's distribution line references a real command). All new code TDD; final gate `make quality`, then `make mutation`.
+**Remaining Effort:** Phases 5–8 (four phases). Recommended order: 5 → 7 → 6+8 (guide and skill install ship together so the guide's distribution line references a real command). All new code TDD; final gate `make quality`, then `make mutation`.
 
 ---
 
 ## Known Existing Work
 
 - `prompts list` / `prompts show` fully implemented in `internal/cli/prompts.go` (commits `255a808`, lint fix `097de17`); registered in `cmd.go:50`. Frontmatter stripped on show.
+- `internal/prompt` authoring helpers (Phase 4, commit `15ca16a`): `HasCompletionSignal` (placeholder-aware content substring), `ValidatePromptText` (returns `[]Check` in order frontmatter/description/completion-signal), `ExtractDescription` (frontmatter `description:` first, else first non-empty non-heading body line; `""` on invalid frontmatter YAML), `Check`/`ValidationResult` types, `StatusOK/Warn/Fail` constants. `cli.hasCompletionSignal` (`run.go:277`) untouched.
+- `internal/prompt.FrontMatterSettings` gained `Description`; delimiter scan refactored into `splitFrontMatter`/`opensFrontMatter` (unexported) — `ParseFrontMatter` behavior unchanged.
 - `internal/prompt.Prompt` resolution chain (`GetPrompt`): inline → stdin → explicit file → `PromptsDir` file (upwards search via `findFileUpwards`) → bundled build/plan. Banner written for file-sourced prompts.
 - `internal/prompt.ParseFrontMatter` (`frontmatter.go`) parses `model`/`agentMode` overrides — reusable for the `frontmatter`/`description` checks.
 - `cli.hasCompletionSignal` (`run.go:277`): literal, line-exact check of *agent output* inside `RunLoop` — protected by spec; do not repurpose for content checking.
