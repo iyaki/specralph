@@ -78,6 +78,13 @@ func runCommandLogic(cmd *cobra.Command, args []string, cfg *config.Config) erro
 	if err != nil {
 		return fmt.Errorf("failed to get prompt: %w", err)
 	}
+	// fmOverride is non-nil exactly when the prompt was resolved from a prompt
+	// file (explicit --prompt-file or PromptsDir/<name>.md); inline, stdin, and
+	// bundled sources return nil.
+	if fmOverride != nil && !prompt.HasCompletionSignal(promptText) {
+		_, _ = fmt.Fprintln(cmd.ErrOrStderr(),
+			"warning: prompt file has no completion signal (<COMPLETION_SIGNAL>); the loop will only stop at max iterations")
+	}
 
 	// Apply configuration precedence
 	applyEffectiveSettings(cfg, cmd, fmOverride, promptName)

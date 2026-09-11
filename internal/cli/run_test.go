@@ -3,6 +3,7 @@ package cli_test
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -59,6 +60,101 @@ func TestRunCommandExecuteDebugHappyPath(t *testing.T) {
 	output := out.String()
 	if !strings.Contains(output, "[build]") {
 		t.Errorf("expected output to contain [build], got %q", output)
+	}
+}
+
+func TestRunMissingSignalWarning(t *testing.T) {
+	const wantWarning = "warning: prompt file has no completion signal " +
+		"(<COMPLETION_SIGNAL>); the loop will only stop at max iterations"
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	tmp := t.TempDir()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(wd)
+	})
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("DEBUG", "1")
+
+	binDir := t.TempDir()
+	writeExecutable(t, binDir, "opencode", "#!/bin/sh\necho \"ok\"\n")
+	t.Setenv("PATH", binDir)
+
+	promptsDir := filepath.Join(home, ".ralph")
+	if err := os.MkdirAll(promptsDir, 0o755); err != nil {
+		t.Fatalf("failed to create prompts dir: %v", err)
+	}
+	promptFile := filepath.Join(promptsDir, "review.md")
+	noSignal := "Review the implementation plan.\nStop when done.\n"
+	if err := os.WriteFile(promptFile, []byte(noSignal), 0o644); err != nil {
+		t.Fatalf("failed to write prompt file: %v", err)
+	}
+	stdinFile, err := os.Create(filepath.Join(tmp, "stdin.md"))
+	if err != nil {
+		t.Fatalf("failed to create stdin file: %v", err)
+	}
+	if _, err := stdinFile.WriteString(noSignal); err != nil {
+		t.Fatalf("failed to write stdin content: %v", err)
+	}
+	if _, err := stdinFile.Seek(0, 0); err != nil {
+		t.Fatalf("failed to rewind stdin file: %v", err)
+	}
+
+	tests := []struct {
+		name      string
+		args      []string
+		stdin     bool
+		wantWarns bool
+	}{
+		{name: "prompt dir file without signal warns", args: []string{"review"}, wantWarns: true},
+		{name: "explicit prompt file without signal warns", args: []string{"--prompt-file", promptFile}, wantWarns: true},
+		{name: "inline prompt without signal is silent", args: []string{"--prompt", noSignal}},
+		{name: "stdin prompt without signal is silent", args: []string{"-"}, stdin: true},
+		{name: "built-in prompt is silent", args: []string{"build"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assertRunWarningCase(t, tt.args, tt.wantWarns, wantWarning, stdinFile)
+		})
+	}
+}
+
+func assertRunWarningCase(t *testing.T, args []string, wantWarns bool, wantWarning string, stdinFile *os.File) {
+	t.Helper()
+
+	if stdinFile != nil {
+		old := os.Stdin
+		os.Stdin = stdinFile
+		t.Cleanup(func() { os.Stdin = old })
+	}
+
+	cmd := cli.NewRunCommand()
+	cmd.SetArgs(args)
+
+	var out, errOut bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&errOut)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("expected execute success in debug mode, got: %v", err)
+	}
+	if !strings.Contains(out.String(), "All planned tasks completed") {
+		t.Fatalf("expected run to proceed normally, got %q", out.String())
+	}
+
+	got := strings.Count(errOut.String(), wantWarning)
+	if wantWarns && got != 1 {
+		t.Errorf("expected warning exactly once on stderr, got %d in %q", got, errOut.String())
+	}
+	if !wantWarns && got != 0 {
+		t.Errorf("expected no warning, got %d in %q", got, errOut.String())
 	}
 }
 
