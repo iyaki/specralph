@@ -1,6 +1,6 @@
 # Implementation Plan (prompts/build-*)
 
-**Status:** Not Started (0/6 phases) — specs complete and consistent; code has none of `build-subagents`, the `build` alias, or `build-classic` name registration. Only the `build-classic` content contract exists today (as the legacy `build` generator).
+**Status:** In Progress (1/6 phases) — Phase 1 complete (`93cb6af`): `BuildAliasPrompt` is a first-class config value with flag/env/TOML/overlay support and `build-classic` default. Phases 2–6 remain.
 **Last Updated:** 2026-09-15
 **Primary Spec(s):** [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md), [specs/prompts/build-classic.md](specs/prompts/build-classic.md), [specs/prompts.md](specs/prompts.md)
 
@@ -13,7 +13,7 @@
 | `build-classic` built-in (content contract) | [specs/prompts/build-classic.md](specs/prompts/build-classic.md) | `internal/prompt/prompts.go` (`BuildPrompt`) | — | ✅ Content exists as `BuildPrompt`; ❌ `build-classic` name not registered (`bundledPrompt` accepts only `build`/`plan`, `prompts.go:129-145`) |
 | `build-subagents` built-in (batch prompt) | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) | `internal/prompt/prompts.go` (new `BuildSubagentsPrompt`) | — | ❌ Missing (grep: no hits in `internal/`) |
 | `build` alias rewrite at invocation entry | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) (Workflows), [specs/prompts.md](specs/prompts.md) | `internal/cli/run.go` (`runCommandLogic` — shared entry of root cmd and `run` subcommand) | — | ❌ Missing (`GetPrompt` has no rewrite step, `prompts.go:22-46`) |
-| `BuildAliasPrompt` config field (flag/env/TOML/overlay) | [specs/configuration.md](specs/configuration.md) (canonical tables), [build-subagents.md](specs/prompts/build-subagents.md) | `internal/config/config.go`, `internal/cli/run.go` (`setupSharedFlags`) | — | ❌ Missing (`Config` struct `config.go:40-59` has no field) |
+| `BuildAliasPrompt` config field (flag/env/TOML/overlay) | [specs/configuration.md](specs/configuration.md) (canonical tables), [build-subagents.md](specs/prompts/build-subagents.md) | `internal/config/config.go`, `internal/cli/run.go` (`setupSharedFlags`) | — | ✅ Done (`93cb6af`: field `toml:"build-alias-prompt"` no omitempty, `--build-alias-prompt` flag, `RALPH_BUILD_ALIAS_PROMPT`, overlay merge, default `build-classic`) |
 | `ralph init` unconditional opt-in | [specs/commands/init.md](specs/commands/init.md) | `internal/cli/init.go` (`buildConfigFromAnswers`), `internal/config/writer.go` | — | ❌ Missing (init writes via `WriteConfig` → whole-struct encode; field tag + value suffices) |
 | `prompts list/show/validate` alias awareness | [specs/commands/prompts.md](specs/commands/prompts.md) | `internal/cli/prompts.go` | — | ❌ Missing (hardcoded `build`/`plan` cases at `prompts.go:177-181, 201-212, 291-303`) |
 | E2E `[prompt-overrides.build]` migration | [specs/config-by-prompt.md](specs/config-by-prompt.md) (keys use resolved name), build-subagents.md Migration notes | `test/e2e/config_by_prompt_test.go`, `test/e2e/config_local_test.go` | — | ❌ Uses `build` key; silently stops applying once alias lands |
@@ -31,7 +31,7 @@
 
 **Goal:** The alias target is a first-class config value with full precedence support.
 
-**Status:** ❌ Not started
+**Status:** ✅ Complete (`93cb6af`)
 
 **Paths:**
 - `internal/config/config.go`
@@ -39,11 +39,11 @@
 - `internal/config/config_test.go`
 
 **Checklist:**
-- [ ] `Config.BuildAliasPrompt string` with `toml:"build-alias-prompt"` (no `omitempty` — `WriteConfig` must always emit it for init)
-- [ ] Flag `--build-alias-prompt` bound to the field in `setupSharedFlags`
-- [ ] Env `RALPH_BUILD_ALIAS_PROMPT`: extend `envValues` (`:21-31`), `readEnv` (`:181-195`), `applyConfigValues` (`:197+`) — default `build-classic`, empty resolves to default (spec: "empty value resolves to the default")
-- [ ] Local-overlay merge: extend `mergePromptAndLogScalars` (`:334-344`) with `meta.IsDefined("build-alias-prompt")`
-- [ ] Precedence tests: flag > env > base TOML > local overlay > default
+- [x] `Config.BuildAliasPrompt string` with `toml:"build-alias-prompt"` (no `omitempty` — `WriteConfig` must always emit it for init)
+- [x] Flag `--build-alias-prompt` bound to the field in `setupSharedFlags`
+- [x] Env `RALPH_BUILD_ALIAS_PROMPT`: extend `envValues` (`:21-31`), `readEnv` (`:181-195`), `applyConfigValues` (`:197+`) — default `build-classic`, empty resolves to default (spec: "empty value resolves to the default")
+- [x] Local-overlay merge: extend `mergePromptAndLogScalars` (`:334-344`) with `meta.IsDefined("build-alias-prompt")`
+- [x] Precedence tests: flag > env > base TOML > local overlay > default
 
 **Definition of Done:** failing precedence tests written first; `go test ./internal/config/ ./internal/cli/` passes; `make lint` clean.
 
@@ -187,20 +187,28 @@
 - 2026-09-15: grep `README.md` — documents pre-alias built-ins (`build` and `plan`) at `:37`, `:245`, `:407`; no alias/`build-alias-prompt` mention anywhere.
 - 2026-09-15: baseline untouched — no source modified in this planning pass; `make quality` to be run as gate for Phase 1 TDD start.
 
+### 2026-09-15: Phase 1 — `BuildAliasPrompt` Config Field
+
+- 2026-09-15: `go test ./internal/config/ -run 'TestLoadConfigDefaults|TestLoadConfigBuildAliasPromptPrecedence|TestLoadConfigWithOverlayScalars|TestWriteConfigAlwaysEmitsBuildAliasPrompt'` and `go test ./internal/cli/ -run TestSetupSharedFlagsRegistersBuildAliasPrompt` (pre-implementation) — RED confirmed: `BuildAliasPrompt undefined` compile errors and `unknown flag: --build-alias-prompt`; failures are the missing feature, not test typos.
+- 2026-09-15: implementation — `defaultBuildAliasPrompt = "build-classic"` const; `Config.BuildAliasPrompt` (`toml:"build-alias-prompt"`, no `omitempty`); `envValues.buildAliasPrompt` + `readEnv` `RALPH_BUILD_ALIAS_PROMPT`; `applyConfigValues` `resolveString` with default; `mergePromptAndLogScalars` overlay key; `setupSharedFlags` `--build-alias-prompt` binding. Test support: `clearConfigEnv` clears the new var; `assertDefaultCoreFields` asserts the `build-classic` default.
+- 2026-09-15: `go test ./internal/config/ ./internal/cli/` — PASS. New coverage: `TestLoadConfigBuildAliasPromptPrecedence` (file < env < flag), overlay-wins assertion in `TestLoadConfigWithOverlayScalars`, `TestWriteConfigAlwaysEmitsBuildAliasPrompt` (key emitted even when empty — init contract), `TestSetupSharedFlagsRegistersBuildAliasPrompt` (flag on both `run` and root commands).
+- 2026-09-15: `make lint` — 0 issues after wrapping the two over-limit lines to match existing repo style (multi-line `resolveString`, continuation-string flag usage).
+- 2026-09-15: commit `93cb6af` — `feat(config): add BuildAliasPrompt field with full precedence support` (6 files, +129).
+
 ---
 
 ## Summary
 
 | Phase | Description | Status | Completion |
 |-------|-------------|--------|------------|
-| 1 | `BuildAliasPrompt` config field (flag/env/TOML/overlay) | ❌ Not started | 0% |
+| 1 | `BuildAliasPrompt` config field (flag/env/TOML/overlay) | ✅ Complete | 100% |
 | 2 | Built-in prompt registry + `build-subagents` generator | ❌ Not started | 0% |
 | 3 | `build` alias rewrite at invocation entry | ❌ Not started | 0% |
 | 4 | `ralph init` unconditional opt-in | ❌ Not started | 0% |
 | 5 | `prompts` CLI alias awareness (list/show/validate) | ❌ Not started | 0% |
 | 6 | Migration, e2e, README/docs | ❌ Not started | 0% |
 
-**Remaining Effort:** All 6 phases. Largest single item is the `build-subagents` generator + its content-marker tests (Phase 2); highest-blast-radius item is the e2e `[prompt-overrides.build]` migration (Phase 6). `build-classic` content work is already done (exists as `BuildPrompt`).
+**Remaining Effort:** Phases 2–6. Largest single item is the `build-subagents` generator + its content-marker tests (Phase 2); highest-blast-radius item is the e2e `[prompt-overrides.build]` migration (Phase 6). `build-classic` content work is already done (exists as `BuildPrompt`). Phase 1's always-emit tag is the only prerequisite Phase 4 needs — it is in place.
 
 ---
 
