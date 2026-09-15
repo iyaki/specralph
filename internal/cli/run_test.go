@@ -47,7 +47,7 @@ func TestRunCommandExecuteDebugHappyPath(t *testing.T) {
 	t.Setenv("PATH", binDir)
 
 	cmd := cli.NewRunCommand()
-	cmd.SetArgs([]string{"build"})
+	cmd.SetArgs([]string{"build-classic"})
 
 	// Capture output
 	var out bytes.Buffer
@@ -58,8 +58,8 @@ func TestRunCommandExecuteDebugHappyPath(t *testing.T) {
 	}
 
 	output := out.String()
-	if !strings.Contains(output, "[build]") {
-		t.Errorf("expected output to contain [build], got %q", output)
+	if !strings.Contains(output, "[build-classic]") {
+		t.Errorf("expected output to contain [build-classic], got %q", output)
 	}
 }
 
@@ -117,7 +117,7 @@ func TestRunMissingSignalWarning(t *testing.T) {
 		{name: "explicit prompt file without signal warns", args: []string{"--prompt-file", promptFile}, wantWarns: true},
 		{name: "inline prompt without signal is silent", args: []string{"--prompt", noSignal}},
 		{name: "stdin prompt without signal is silent", args: []string{"-"}, stdin: true},
-		{name: "built-in prompt is silent", args: []string{"build"}},
+		{name: "built-in prompt is silent", args: []string{"build-classic"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

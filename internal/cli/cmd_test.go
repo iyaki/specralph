@@ -66,7 +66,7 @@ func TestNewRalphCommandExecuteDebugHappyPath(t *testing.T) {
 	t.Setenv("PATH", binDir)
 
 	cmd := cli.NewRalphCommand()
-	cmd.SetArgs([]string{"build"})
+	cmd.SetArgs([]string{"build-classic"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("expected execute success in debug mode, got: %v", err)
 	}
@@ -299,8 +299,21 @@ func TestNewRalphCommandDefaultToBuild(t *testing.T) {
 		_ = os.Chdir(wd)
 	})
 
-	t.Setenv("HOME", t.TempDir())
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 	t.Setenv("DEBUG", "1")
+
+	// Plain `build` is no longer a built-in (the CLI alias rewrite lands in a
+	// later phase); resolve the default name through the prompts dir for now.
+	promptsDir := filepath.Join(home, ".ralph")
+	if err := os.MkdirAll(promptsDir, 0o755); err != nil {
+		t.Fatalf("failed to create prompts dir: %v", err)
+	}
+	buildPrompt := filepath.Join(promptsDir, "build.md")
+	buildPromptContent := "# Agent Instructions (Build Mode)\nReply with <COMPLETION_SIGNAL> when done.\n"
+	if err := os.WriteFile(buildPrompt, []byte(buildPromptContent), 0o644); err != nil {
+		t.Fatalf("failed to write build prompt: %v", err)
+	}
 
 	binDir := t.TempDir()
 	writeExecutable(t, binDir, "opencode", "#!/bin/sh\necho \"ok\"\n")

@@ -128,17 +128,22 @@ func promptFromDir(
 
 func bundledPrompt(cfg *config.Config, promptName, scope string, output io.Writer) (string, error) {
 	switch promptName {
-	case "build":
-		writeBanner(output, "               USING DEFAULT 'BUILD' PROMPT")
+	case "build-classic":
+		writeBanner(output, "               USING DEFAULT 'BUILD-CLASSIC' PROMPT")
 
 		return BuildPrompt(cfg), nil
+	case "build-subagents":
+		writeBanner(output, "               USING DEFAULT 'BUILD-SUBAGENTS' PROMPT")
+
+		return BuildSubagentsPrompt(cfg), nil
 	case "plan":
 		writeBanner(output, "               USING DEFAULT 'PLAN' PROMPT")
 
 		return PlanPrompt(cfg, scope), nil
 	default:
 		return "", fmt.Errorf(
-			"prompt file not found for '%s'. Use a valid prompt file or one of the pre-bundled prompts (build, plan)",
+			"prompt file not found for '%s'. Use a valid prompt file or one of the "+
+				"pre-bundled prompts (build-classic, build-subagents, plan)",
 			promptName,
 		)
 	}
@@ -164,22 +169,12 @@ func joinPromptLines(lines ...string) string {
 	return strings.Join(lines, "\n") + "\n"
 }
 
-// BuildPrompt generates the default build prompt.
+// BuildPrompt generates the build-classic prompt (the legacy single-task build prompt).
 func BuildPrompt(cfg *config.Config) string {
-	specsIndexFileReference := ""
-	if cfg.SpecsIndexFile != "" && !cfg.NoSpecsIndex {
-		specsIndexFileReference = filepath.Join(cfg.SpecsDir, cfg.SpecsIndexFile)
-	}
-
-	specsIndexFileReferenceText := ""
-	if specsIndexFileReference != "" {
-		specsIndexFileReferenceText = fmt.Sprintf(" (including `%s` and related specs)", specsIndexFileReference)
-	}
-
 	return joinPromptLines(
 		"# Agent Instructions (Build Mode)",
 		"",
-		fmt.Sprintf("- Study `%s/*`%s.", cfg.SpecsDir, specsIndexFileReferenceText),
+		specsStudyLine(cfg),
 		fmt.Sprintf("- Study `%s` and pick the single most important task.", cfg.ImplementationPlanName),
 		"- Implement the task",
 		"- Validate the implementation",
@@ -206,6 +201,65 @@ func BuildPrompt(cfg *config.Config) string {
 			"- You may implement missing functionality if required, but study relevant `%s/*` first.",
 			cfg.SpecsDir,
 		),
+		"- You may add temporary logging as needed and remove if no longer needed.",
+		"",
+	)
+}
+
+// specsStudyLine renders the shared specs study instruction with the index
+// reference parenthetical when the specs index is enabled.
+func specsStudyLine(cfg *config.Config) string {
+	specsIndexFileReference := ""
+	if cfg.SpecsIndexFile != "" && !cfg.NoSpecsIndex {
+		specsIndexFileReference = filepath.Join(cfg.SpecsDir, cfg.SpecsIndexFile)
+	}
+
+	specsIndexFileReferenceText := ""
+	if specsIndexFileReference != "" {
+		specsIndexFileReferenceText = fmt.Sprintf(" (including `%s` and related specs)", specsIndexFileReference)
+	}
+
+	return fmt.Sprintf("- Study `%s/*`%s.", cfg.SpecsDir, specsIndexFileReferenceText)
+}
+
+// BuildSubagentsPrompt generates the build-subagents batch prompt: up to 10
+// tasks per run, at least one subagent per task.
+func BuildSubagentsPrompt(cfg *config.Config) string {
+	return joinPromptLines(
+		"# Agent Instructions (Build Mode with Subagents)",
+		"",
+		specsStudyLine(cfg),
+		fmt.Sprintf(
+			"- Study `%s` and select the next pending tasks, up to a maximum of 10.",
+			cfg.ImplementationPlanName,
+		),
+		"- If no tasks are pending, verify the plan is complete and reply with `<COMPLETION_SIGNAL>`.",
+		"",
+		"## Task Execution",
+		"",
+		"- Dispatch at least one subagent per selected task using the agent CLI's native",
+		"  subagent mechanism.",
+		"- Give each subagent a self-contained brief: the task, relevant spec paths, and",
+		"  validation commands.",
+		"- Orchestrate only: tasks are implemented by subagents, not directly in the main context.",
+		fmt.Sprintf(
+			"- After each task: validate, update `%s`, and commit code and",
+			cfg.ImplementationPlanName,
+		),
+		"  plan update together.",
+		"- If a task fails, record it in the plan as not complete and continue with the",
+		"  remaining selected tasks.",
+		"",
+		"## Stop Condition",
+		"",
+		"- After the selected batch, stop. Do NOT pick up more tasks in the same run.",
+		"- If and only if ALL stories are complete and passing, reply with `<COMPLETION_SIGNAL>`.",
+		"",
+		"## IMPORTANT",
+		"",
+		"- Before changes, search the codebase. Do NOT assume functionality is missing.",
+		"- Use the verification log format: `YYYY-MM-DD: <command or URL> - <result>`.",
+		"- Keep a `Manual Deployment Tasks` section in the plan and use `None` when there are no tasks.",
 		"- You may add temporary logging as needed and remove if no longer needed.",
 		"",
 	)
