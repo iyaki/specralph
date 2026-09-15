@@ -84,11 +84,16 @@ func TestPromptsListShowsBuiltInPrompts(t *testing.T) {
 	if !strings.Contains(output, "Built-in Prompts:") {
 		t.Errorf("expected output to contain 'Built-in Prompts:', got %q", output)
 	}
-	if !strings.Contains(output, "build") {
-		t.Errorf("expected output to mention 'build' prompt, got %q", output)
-	}
-	if !strings.Contains(output, "plan") {
-		t.Errorf("expected output to mention 'plan' prompt, got %q", output)
+	for _, want := range []string{
+		"build-classic",
+		"build-subagents",
+		"plan",
+		"Aliases:",
+		"build -> build-classic (configurable via build-alias-prompt)",
+	} {
+		if !strings.Contains(output, want) {
+			t.Errorf("expected output to contain %q, got %q", want, output)
+		}
 	}
 	if !strings.Contains(output, "Use 'ralph run <prompt-name>' to execute a prompt.") {
 		t.Errorf("expected usage hint, got %q", output)
@@ -143,12 +148,53 @@ It checks for security issues and performance.
 		t.Errorf("expected output to mention 'review' prompt, got %q", output)
 	}
 }
+
+func TestPromptsListAliasFollowsConfig(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	tmp := t.TempDir()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(wd)
+	})
+
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	t.Setenv("RALPH_BUILD_ALIAS_PROMPT", "build-subagents")
+
+	cmd := cli.NewPromptsListCommand()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("expected execute success, got: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "build -> build-subagents (configurable via build-alias-prompt)") {
+		t.Errorf("expected alias line to follow config, got %q", output)
+	}
+}
+
 func TestPromptsShowBuild(t *testing.T) {
 	testPromptsShow(t, "build", "Agent Instructions (Build Mode)")
 }
 
 func TestPromptsShowPlan(t *testing.T) {
 	testPromptsShow(t, "plan", "Agent Instructions (Planning Mode)")
+}
+
+func TestPromptsShowBuildSubagents(t *testing.T) {
+	testPromptsShow(t, "build-subagents", "Agent Instructions (Build Mode with Subagents)")
+}
+
+func TestPromptsShowBuildFollowsAliasConfig(t *testing.T) {
+	t.Setenv("RALPH_BUILD_ALIAS_PROMPT", "build-subagents")
+	testPromptsShow(t, "build", "Agent Instructions (Build Mode with Subagents)")
 }
 
 func testPromptsShow(t *testing.T, promptName, expectedHeader string) {
@@ -329,40 +375,49 @@ This content should be displayed without frontmatter.
 }
 
 func TestPromptsValidateBuiltIn(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("failed to get cwd: %v", err)
-	}
-	tmp := t.TempDir()
-	if err := os.Chdir(tmp); err != nil {
-		t.Fatalf("failed to chdir: %v", err)
-	}
-	t.Cleanup(func() {
-		_ = os.Chdir(wd)
-	})
-	t.Setenv("HOME", t.TempDir())
-
-	cmd := cli.NewPromptsValidateCommand()
-	cmd.SetArgs([]string{"build"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("expected built-in prompt to validate, got: %v", err)
-	}
-
-	output := out.String()
-	for _, want := range []string{
-		"build\n",
-		"ok       resolve",
-		"ok       frontmatter",
-		"ok       description",
-		"ok       completion-signal",
-		"0 failed, 0 warnings",
+	for _, tc := range []struct{ input, resolved string }{
+		{input: "build", resolved: "build-classic"},
+		{input: "build-classic", resolved: "build-classic"},
+		{input: "build-subagents", resolved: "build-subagents"},
+		{input: "plan", resolved: "plan"},
 	} {
-		if !strings.Contains(output, want) {
-			t.Errorf("expected output to contain %q, got %q", want, output)
-		}
+		t.Run(tc.input, func(t *testing.T) {
+			wd, err := os.Getwd()
+			if err != nil {
+				t.Fatalf("failed to get cwd: %v", err)
+			}
+			tmp := t.TempDir()
+			if err := os.Chdir(tmp); err != nil {
+				t.Fatalf("failed to chdir: %v", err)
+			}
+			t.Cleanup(func() {
+				_ = os.Chdir(wd)
+			})
+			t.Setenv("HOME", t.TempDir())
+
+			cmd := cli.NewPromptsValidateCommand()
+			cmd.SetArgs([]string{tc.input})
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("expected built-in prompt to validate, got: %v", err)
+			}
+
+			output := out.String()
+			for _, want := range []string{
+				tc.resolved + "\n",
+				"ok       resolve",
+				"ok       frontmatter",
+				"ok       description",
+				"ok       completion-signal",
+				"0 failed, 0 warnings",
+			} {
+				if !strings.Contains(output, want) {
+					t.Errorf("expected output to contain %q, got %q", want, output)
+				}
+			}
+		})
 	}
 }
 
