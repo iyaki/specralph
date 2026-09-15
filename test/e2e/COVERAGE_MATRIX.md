@@ -1,6 +1,6 @@
 # E2E Coverage Matrix
 
-Last Updated: 2026-04-20
+Last Updated: 2026-09-15
 Primary Spec: `specs/e2e-testing.md`
 
 This matrix maps the supported CLI/config/output behavior surface to concrete e2e tests.
@@ -14,6 +14,11 @@ Test identifiers use Go `TestName[/Subtest]` notation.
 | `ralph <prompt> [scope]` alias | Non-subcommand prompt names execute via run path | `TestE2EConfigPrecedence_PromptFileFromConfigFile`, `TestE2EConfigPrecedence_NoSpecsIndexFromConfigFile`, `TestE2EConfigByPromptOverrideFromConfigApplies` |
 | `ralph init` | Registered subcommand wins routing collisions | `TestE2ERunCommandRouting/InitSubcommandWinsCollision`, `TestE2EInitCommand/InitWithoutTTYFailsFast` |
 | `ralph run init` | `init` is treated as prompt name when invoked through `run` | `TestE2ERunCommandRouting/RunInitTreatsInitAsPromptName`, `TestE2EInitCommand/InitPromptNameRunsViaRunSubcommand` |
+| `build` alias default | Bare `ralph`/`ralph build` resolves to the `build-classic` built-in (backwards compatible) | `TestE2EBuildAliasDefaultResolvesBuildClassic/BareBuildUsesClassicBuiltin`, `TestE2EBuildAliasDefaultResolvesBuildClassic/ExplicitBuildClassicMatchesAliasOutput` |
+| `build-alias-prompt` config key | Alias target from TOML routes `build` to the resolved built-in | `TestE2EBuildAliasConfigTargetEmitsSubagentsPrompt` |
+| unknown `build-alias-prompt` target | Fails with prompt-not-found before agent execution | `TestE2EBuildAliasUnknownTargetFailsBeforeAgent` |
+| `build-alias-prompt` ignored for non-`build` names | `plan` resolves regardless of alias target | `TestE2EBuildAliasPlanUnaffectedByAliasTarget` |
+| `build-alias-prompt = "build"` escape hatch | Rewrite skipped; `PromptsDir/build.md` used when present | `TestE2EBuildAliasEscapeHatchUsesPromptFile` |
 
 ## Prompt Resolution and Prompt-Level Settings
 
@@ -60,7 +65,13 @@ Test identifiers use Go `TestName[/Subtest]` notation.
 | log truncation and content parity | Truncation mode and stdout parity are preserved | `TestE2ELoggingFlags/LogTruncate`, `TestE2ELoggingStdoutParity` |
 | log file security | Log file permissions are restrictive (`0600`) | `TestE2ELoggingPermissions` |
 
-## Pending Gaps (Tracked in `IMPLEMENTATION_PLAN.md` Phase 7.2)
+## Known Non-E2E Coverage
+
+| Required behavior | Status |
+| --- | --- |
+| `ralph init` writes `build-alias-prompt = "build-subagents"` | Covered at unit level (`TestInitCommandWritesBuildAliasPrompt`, `TestInitCommandOverwriteReplacesBuildAliasPrompt`); init is TTY-gated, e2e covers the non-TTY fast-fail |
+
+## Resolved Gaps
 
 | Required behavior | Status |
 | --- | --- |

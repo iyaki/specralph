@@ -82,7 +82,8 @@ test-race:
 	$(GO) test -race ./...
 
 test-mutation:
-	gremlins unleash $(ARGS)
+	# ponytail: default coefficient timed out every mutant on 4-core dev boxes; raise if a mutant run still hangs
+	gremlins unleash --timeout-coefficient 10 $(ARGS)
 
 mutation: test-mutation
 
