@@ -1,6 +1,6 @@
 # Implementation Plan (prompts/build-*)
 
-**Status:** In Progress (3/6 phases) — Phase 1 (`93cb6af`): `BuildAliasPrompt` first-class config value. Phase 2 (`d1271b2`): `build-classic`/`build-subagents` registered, `build` removed from built-ins. Phase 3 (`256ff02`): `build` alias rewrite at invocation entry. Phases 4–6 remain.
+**Status:** In Progress (4/6 phases) — Phase 1 (`93cb6af`): `BuildAliasPrompt` first-class config value. Phase 2 (`d1271b2`): `build-classic`/`build-subagents` registered, `build` removed from built-ins. Phase 3 (`256ff02`): `build` alias rewrite at invocation entry. Phase 4 (`c7de4b9`): `ralph init` unconditional opt-in. Phases 5–6 remain.
 **Last Updated:** 2026-09-15
 **Primary Spec(s):** [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md), [specs/prompts/build-classic.md](specs/prompts/build-classic.md), [specs/prompts.md](specs/prompts.md)
 
@@ -14,7 +14,7 @@
 | `build-subagents` built-in (batch prompt) | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) | `internal/prompt/prompts.go` (`BuildSubagentsPrompt`) | — | ✅ Done (`d1271b2`: generator matches spec Appendix outline exactly; shared `specsStudyLine` helper) |
 | `build` alias rewrite at invocation entry | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) (Workflows), [specs/prompts.md](specs/prompts.md) | `internal/cli/run.go` (`runCommandLogic` — shared entry of root cmd and `run` subcommand) | — | ✅ Done (`256ff02`: `rewriteBuildAlias` applied once after config load; shared helper reusable by Phase 5) |
 | `BuildAliasPrompt` config field (flag/env/TOML/overlay) | [specs/configuration.md](specs/configuration.md) (canonical tables), [build-subagents.md](specs/prompts/build-subagents.md) | `internal/config/config.go`, `internal/cli/run.go` (`setupSharedFlags`) | — | ✅ Done (`93cb6af`: field `toml:"build-alias-prompt"` no omitempty, `--build-alias-prompt` flag, `RALPH_BUILD_ALIAS_PROMPT`, overlay merge, default `build-classic`) |
-| `ralph init` unconditional opt-in | [specs/commands/init.md](specs/commands/init.md) | `internal/cli/init.go` (`buildConfigFromAnswers`), `internal/config/writer.go` | — | ❌ Missing (init writes via `WriteConfig` → whole-struct encode; field tag + value suffices) |
+| `ralph init` unconditional opt-in | [specs/commands/init.md](specs/commands/init.md) | `internal/cli/init.go` (`buildConfigFromAnswers`), `internal/config/writer.go` | — | ✅ Done (`c7de4b9`: constant value in `buildConfigFromAnswers`; Phase 1 tag makes `WriteConfig` always emit the key; overwrite regeneration replaces prior value) |
 | `prompts list/show/validate` alias awareness | [specs/commands/prompts.md](specs/commands/prompts.md) | `internal/cli/prompts.go` | — | ❌ Missing (hardcoded `build`/`plan` cases at `prompts.go:177-181, 201-212, 291-303`) |
 | E2E `[prompt-overrides.build]` migration | [specs/config-by-prompt.md](specs/config-by-prompt.md) (keys use resolved name), build-subagents.md Migration notes | `test/e2e/config_by_prompt_test.go`, `test/e2e/config_local_test.go` | — | ⚠️ Partial (keys migrated to `build-classic` in `256ff02` — required by the per-commit coverage gate; escape-hatch case + new alias e2e coverage remain in Phase 6) |
 | README / user docs | README.md | `README.md` | — | ❌ Documents pre-alias world (`build`/`plan` only, no alias, no `build-alias-prompt`) |
@@ -102,18 +102,17 @@
 
 **Goal:** Every generated config targets `build-subagents`; key never asked, never omitted, overwritten on re-init.
 
-**Status:** ❌ Not started
+**Status:** ✅ Complete (`c7de4b9`)
 
 **Paths:**
 - `internal/cli/init.go` (`buildConfigFromAnswers` — called by `writeInitConfig` `:373-378`)
 - `internal/cli/init_test.go`
 
-**Checklist:**
-- [ ] `buildConfigFromAnswers` sets `BuildAliasPrompt: "build-subagents"` unconditionally (not in `InitAnswers` — spec: "not part of `InitAnswers`"; not a questionnaire question)
-- [ ] Generated TOML contains `build-alias-prompt = "build-subagents"` (whole-struct encode via `config.WriteConfig`/toml encoder — covered by Phase 1 field tag)
-- [ ] Re-init overwrite path replaces any previous `build-alias-prompt` value (regeneration always writes the constant)
-- [ ] Preview lines unchanged (spec mandates the TOML key, not a preview line)
-- [ ] Test: generated config loads through existing config resolution and `ralph build` resolves to `build-subagents` (unit-level: `WriteConfig` output contains the key)
+- [x] `buildConfigFromAnswers` sets `BuildAliasPrompt: "build-subagents"` unconditionally (not in `InitAnswers` — spec: "not part of `InitAnswers`"; not a questionnaire question)
+- [x] Generated TOML contains `build-alias-prompt = "build-subagents"` (whole-struct encode via `config.WriteConfig`/toml encoder — covered by Phase 1 field tag)
+- [x] Re-init overwrite path replaces any previous `build-alias-prompt` value (regeneration always writes the constant)
+- [x] Preview lines unchanged (spec mandates the TOML key, not a preview line)
+- [x] Test: generated config loads through existing config resolution and `ralph build` resolves to `build-subagents` (unit-level: `WriteConfig` output contains the key)
 
 **Definition of Done:** failing tests first; `go test ./internal/cli/` passes.
 
@@ -217,6 +216,13 @@
 - 2026-09-15: `go test ./internal/...` — PASS; coverage 95.8% (gate ≥95%). `make lint` — 0 issues (after extracting the alias test table into a package var for `funlen`).
 - 2026-09-15: commit `256ff02` — `feat(cli): rewrite build alias at invocation entry` (7 files, +184/−20).
 
+### 2026-09-15: Phase 4 — `ralph init` Unconditional Opt-In
+
+- 2026-09-15: `go test ./internal/cli/ -run 'TestInitCommandWritesBuildAliasPrompt|TestInitCommandOverwriteReplacesBuildAliasPrompt'` (pre-implementation) — RED confirmed: both fail with `build-alias-prompt = ""` in the generated TOML (missing feature, not test typos). New tests: default-init TOML contains the key and decodes through config resolution to `build-subagents`; confirmed overwrite of a `build-alias-prompt = "build-classic"` file regenerates with `build-subagents`.
+- 2026-09-15: implementation — single line: `buildConfigFromAnswers` sets `BuildAliasPrompt: "build-subagents"`. Key never asked (not in `InitAnswers`/questionnaire), never omitted (Phase 1 tag without `omitempty`), overwrite always rewrites the constant; seed path deliberately ignores any existing value.
+- 2026-09-15: same tests (post-implementation) — PASS; `go test ./internal/...` — PASS; coverage 95.8% (gate ≥95%); `make lint` — 0 issues.
+- 2026-09-15: commit `c7de4b9` — `feat(cli): opt generated configs into build-subagents unconditionally` (2 files, +43).
+
 ---
 
 ## Summary
@@ -226,11 +232,11 @@
 | 1 | `BuildAliasPrompt` config field (flag/env/TOML/overlay) | ✅ Complete | 100% |
 | 2 | Built-in prompt registry + `build-subagents` generator | ✅ Complete | 100% |
 | 3 | `build` alias rewrite at invocation entry | ✅ Complete | 100% |
-| 4 | `ralph init` unconditional opt-in | ❌ Not started | 0% |
+| 4 | `ralph init` unconditional opt-in | ✅ Complete | 100% |
 | 5 | `prompts` CLI alias awareness (list/show/validate) | ❌ Not started | 0% |
 | 6 | Migration, e2e, README/docs | ❌ Not started | 0% |
 
-**Remaining Effort:** Phases 4–6 (`ralph init` opt-in, `prompts` CLI alias awareness, docs/mutation). Phase 5 reuses `rewriteBuildAlias` (`internal/cli/run.go`) — single implementation of the rewrite rule. Phase 6 remainder: escape-hatch e2e case, new alias e2e coverage, init e2e, README.
+**Remaining Effort:** Phases 5–6 (`prompts` CLI alias awareness, docs/mutation). Phase 5 reuses `rewriteBuildAlias` (`internal/cli/run.go`) — single implementation of the rewrite rule. Phase 6 remainder: escape-hatch e2e case, new alias e2e coverage, init e2e, README.
 
 ---
 
