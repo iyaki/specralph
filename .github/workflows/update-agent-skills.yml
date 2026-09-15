@@ -1,0 +1,21 @@
+name: update agent skills
+
+on:
+  schedule:
+    - cron: "0 0 6 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Update skills and open pull request
+        id: skills
+        uses: iyaki/skills-update@v1
