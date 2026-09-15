@@ -7,8 +7,8 @@
 - Assume specs describe intent, not implementation.
 - Verify reality in the codebase before claiming something exists.
 - Implement to spec patterns and data shapes; update specs only when asked.
-- When Writting specs, **NEVER** follow Test Driven Development practices. Write the spec first and stop.
-- For programming tasks, always load Test Driven Development skill.
+- When Writing specs, **NEVER** follow Test Driven Development practices. Write the spec first and stop.
+- For programming tasks, follow Test Driven Development practices (see Testing and Quality Gates).
 
 ## Testing and Quality Gates
 
@@ -31,7 +31,7 @@
 
 - Go version: 1.25 (see `go.mod`).
 - Mutation testing tool: `gremlins`.
-- Lint and security via `golangci-lint`, `govulncheck`, `go-sec`, `go-arch-lint`, `go-fmt`.
+- Lint and security via `golangci-lint`, `govulncheck`, `gosec`, `go-arch-lint`, `go-fmt`.
 
 ## Implementation Guidance
 

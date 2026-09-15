@@ -217,6 +217,12 @@ go get <module>
 go mod tidy
 ```
 
+## Agent Skills
+
+Vendored agent skills live in `.agents/skills/`. Third-party skills are tracked in `skills-lock.json` (source repo, path, and content hash).
+
+The scheduled workflow `.github/workflows/update-agent-skills.yml` refreshes the locked skills periodically and can also be triggered manually (`workflow_dispatch`); it opens a pull request automatically when updates are available.
+
 ## Pull Requests
 
 Please keep PRs focused and easy to review.
