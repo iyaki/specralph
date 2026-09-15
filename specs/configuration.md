@@ -246,7 +246,7 @@ Notes:
 - `ralph --env FOO=bar build` passes `FOO=bar` to the child agent process.
 - `ralph --config ./ralph.toml --env FOO=flag build` resolves `FOO` as flag value over config `[env]`.
 - `RALPH_BUILD_ALIAS_PROMPT=build-classic ralph build` resolves the `build` alias to `build-classic`.
-- `build-alias-prompt = "build-subagents"` in TOML applies when no flag or env var sets it (see [build-subagents.md](build-subagents.md)).
+- `build-alias-prompt = "build-subagents"` in TOML applies when no flag or env var sets it (see [prompts/build-subagents.md](prompts/build-subagents.md)).
 - Config files that include `config-file = "..."` fail before agent execution starts.
 
 ## Appendices

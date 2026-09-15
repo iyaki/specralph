@@ -179,7 +179,7 @@ Notes:
 - Values in this section apply only when that prompt is selected.
 - This section does not replace existing global `model` and `agent-mode` keys; it complements them.
 
-- Keys refer to the resolved prompt name: the `build` alias resolves to its target before overrides are looked up (see [build-subagents.md](build-subagents.md)).
+- Keys refer to the resolved prompt name: the `build` alias resolves to its target before overrides are looked up (see [prompts/build-subagents.md](prompts/build-subagents.md)).
 
 ### Supported front matter keys
 
