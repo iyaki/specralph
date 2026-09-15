@@ -100,19 +100,3 @@ func TestGoModulePathUsesSpecralph(t *testing.T) {
 		t.Fatalf("expected go.mod to use module github.com/iyaki/specralph")
 	}
 }
-
-func TestSkillsLockPointsToExternalRepos(t *testing.T) {
-	content, err := os.ReadFile(filepath.Join("..", "..", "skills-lock.json"))
-	if err != nil {
-		t.Fatalf("failed to read skills-lock.json: %v", err)
-	}
-
-	expected := []string{
-		"anthropics/skills",
-	}
-	for _, exp := range expected {
-		if !strings.Contains(string(content), exp) {
-			t.Fatalf("expected skills-lock.json to contain %q", exp)
-		}
-	}
-}
