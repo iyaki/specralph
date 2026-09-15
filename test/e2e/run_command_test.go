@@ -12,7 +12,7 @@ func TestE2ERunCommandRouting(t *testing.T) {
 			},
 			ExpectedExitCode: 0,
 			ExpectedStdoutContains: []string{
-				"[build]",
+				"[build-classic]",
 				"<promise>COMPLETE</promise>",
 			},
 		})

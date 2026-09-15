@@ -82,9 +82,9 @@ func TestE2EConfigLocalOverlay_PromptOverridesDeepMerge(t *testing.T) {
 			"RALPH_AGENT_MODE": "",
 		},
 		Files: map[string]string{
-			"ralph.toml": `[prompt-overrides.build]
+			"ralph.toml": `[prompt-overrides.build-classic]
 model = "base-model"`,
-			"ralph-local.toml": `[prompt-overrides.build]
+			"ralph-local.toml": `[prompt-overrides.build-classic]
 agent-mode = "overlay-mode"`,
 		},
 		ExpectedExitCode: 0,

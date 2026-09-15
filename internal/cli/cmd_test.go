@@ -303,17 +303,8 @@ func TestNewRalphCommandDefaultToBuild(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("DEBUG", "1")
 
-	// Plain `build` is no longer a built-in (the CLI alias rewrite lands in a
-	// later phase); resolve the default name through the prompts dir for now.
-	promptsDir := filepath.Join(home, ".ralph")
-	if err := os.MkdirAll(promptsDir, 0o755); err != nil {
-		t.Fatalf("failed to create prompts dir: %v", err)
-	}
-	buildPrompt := filepath.Join(promptsDir, "build.md")
-	buildPromptContent := "# Agent Instructions (Build Mode)\nReply with <COMPLETION_SIGNAL> when done.\n"
-	if err := os.WriteFile(buildPrompt, []byte(buildPromptContent), 0o644); err != nil {
-		t.Fatalf("failed to write build prompt: %v", err)
-	}
+	// Bare `ralph` rewrites the default "build" name to the alias target
+	// (build-classic) and resolves the bundled classic prompt with no files.
 
 	binDir := t.TempDir()
 	writeExecutable(t, binDir, "opencode", "#!/bin/sh\necho \"ok\"\n")
@@ -331,8 +322,8 @@ func TestNewRalphCommandDefaultToBuild(t *testing.T) {
 	}
 
 	output := out.String()
-	if !strings.Contains(output, "[build]") {
-		t.Errorf("expected output to contain [build] (default behavior), got %q", output)
+	if !strings.Contains(output, "[build-classic]") {
+		t.Errorf("expected output to contain [build-classic] (build alias default), got %q", output)
 	}
 }
 

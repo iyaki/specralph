@@ -57,6 +57,11 @@ func runCommandLogic(cmd *cobra.Command, args []string, cfg *config.Config) erro
 	applyBoolFlagOverrides(cfg, logTruncateOverride)
 	applyEnvFlagOverrides(cfg, envFlagOverrides)
 
+	// Apply the build alias rewrite once, at the invocation entry: prompt file
+	// lookup, built-in selection, [prompt-overrides] keys, and loop banners all
+	// observe only the rewritten name.
+	promptName = rewriteBuildAlias(promptName, cfg.BuildAliasPrompt)
+
 	// Initialize logger
 	appLogger, err := logger.NewLogger(cfg)
 	if err != nil {
@@ -303,6 +308,17 @@ func parsePositionalArgs(args []string) (string, string) {
 	}
 
 	return promptName, scope
+}
+
+// rewriteBuildAlias applies the build alias exactly once: the literal
+// invocation name "build" resolves to the configured alias target, unless the
+// target itself is "build" (escape hatch restoring pre-alias resolution).
+func rewriteBuildAlias(promptName, aliasTarget string) string {
+	if promptName == "build" && aliasTarget != "build" {
+		return aliasTarget
+	}
+
+	return promptName
 }
 
 func setupSharedFlags(cmd *cobra.Command, cfg *config.Config) {
