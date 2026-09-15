@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/BurntSushi/toml"
+	"github.com/iyaki/specralph/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -346,6 +348,46 @@ func TestInitCommandSeedsQuestionDefaultsFromExistingConfig(t *testing.T) {
 
 	assertOutputContainsAll(t, out.String(), seededInitPromptDefaults())
 	assertFileContainsAll(t, configPath, seededInitConfigLines())
+}
+
+func TestInitCommandWritesBuildAliasPrompt(t *testing.T) {
+	tmp := t.TempDir()
+	cmd, _ := setupInteractiveInitCommand(t, tmp)
+	cmd.SetIn(strings.NewReader(defaultInitAnswersInput()))
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("expected init to succeed, got %v", err)
+	}
+
+	configPath := filepath.Join(tmp, "ralph.toml")
+	assertFileContainsAll(t, configPath, []string{`build-alias-prompt = "build-subagents"`})
+
+	loaded := &config.Config{}
+	if _, err := toml.DecodeFile(configPath, loaded); err != nil {
+		t.Fatalf("expected generated config to load through config resolution, got %v", err)
+	}
+	if loaded.BuildAliasPrompt != "build-subagents" {
+		t.Fatalf("expected generated config to target build-subagents, got %q", loaded.BuildAliasPrompt)
+	}
+}
+
+func TestInitCommandOverwriteReplacesBuildAliasPrompt(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, "ralph.toml")
+	originalConfig := "agent = \"claude\"\nbuild-alias-prompt = \"build-classic\"\n"
+
+	if err := os.WriteFile(configPath, []byte(originalConfig), 0600); err != nil {
+		t.Fatalf("expected setup to write existing config, got %v", err)
+	}
+
+	cmd, _ := setupInteractiveInitCommand(t, tmp)
+	cmd.SetIn(strings.NewReader("yes\n" + defaultInitAnswersInput()))
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("expected init to succeed when overwrite is confirmed, got %v", err)
+	}
+
+	assertFileContainsAll(t, configPath, []string{`build-alias-prompt = "build-subagents"`})
 }
 
 func TestReadAnswerEOFBehaviors(t *testing.T) {
