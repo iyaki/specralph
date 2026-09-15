@@ -1,6 +1,6 @@
 # Implementation Plan (prompts/build-*)
 
-**Status:** In Progress (2/6 phases) — Phase 1 (`93cb6af`): `BuildAliasPrompt` first-class config value. Phase 2 (`d1271b2`): `build-classic`/`build-subagents` registered, `build` removed from built-ins (alias rewrite pending in Phase 3). Phases 3–6 remain.
+**Status:** In Progress (3/6 phases) — Phase 1 (`93cb6af`): `BuildAliasPrompt` first-class config value. Phase 2 (`d1271b2`): `build-classic`/`build-subagents` registered, `build` removed from built-ins. Phase 3 (`256ff02`): `build` alias rewrite at invocation entry. Phases 4–6 remain.
 **Last Updated:** 2026-09-15
 **Primary Spec(s):** [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md), [specs/prompts/build-classic.md](specs/prompts/build-classic.md), [specs/prompts.md](specs/prompts.md)
 
@@ -12,11 +12,11 @@
 |------------------|------|----------------|-----------|--------|
 | `build-classic` built-in (content contract) | [specs/prompts/build-classic.md](specs/prompts/build-classic.md) | `internal/prompt/prompts.go` (`BuildPrompt`) | — | ✅ Done (`d1271b2`: `bundledPrompt` serves `build-classic`; output byte-identical to former `build` prompt, verified against git HEAD generator) |
 | `build-subagents` built-in (batch prompt) | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) | `internal/prompt/prompts.go` (`BuildSubagentsPrompt`) | — | ✅ Done (`d1271b2`: generator matches spec Appendix outline exactly; shared `specsStudyLine` helper) |
-| `build` alias rewrite at invocation entry | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) (Workflows), [specs/prompts.md](specs/prompts.md) | `internal/cli/run.go` (`runCommandLogic` — shared entry of root cmd and `run` subcommand) | — | ❌ Missing (`GetPrompt` has no rewrite step, `prompts.go:22-46`) |
+| `build` alias rewrite at invocation entry | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) (Workflows), [specs/prompts.md](specs/prompts.md) | `internal/cli/run.go` (`runCommandLogic` — shared entry of root cmd and `run` subcommand) | — | ✅ Done (`256ff02`: `rewriteBuildAlias` applied once after config load; shared helper reusable by Phase 5) |
 | `BuildAliasPrompt` config field (flag/env/TOML/overlay) | [specs/configuration.md](specs/configuration.md) (canonical tables), [build-subagents.md](specs/prompts/build-subagents.md) | `internal/config/config.go`, `internal/cli/run.go` (`setupSharedFlags`) | — | ✅ Done (`93cb6af`: field `toml:"build-alias-prompt"` no omitempty, `--build-alias-prompt` flag, `RALPH_BUILD_ALIAS_PROMPT`, overlay merge, default `build-classic`) |
 | `ralph init` unconditional opt-in | [specs/commands/init.md](specs/commands/init.md) | `internal/cli/init.go` (`buildConfigFromAnswers`), `internal/config/writer.go` | — | ❌ Missing (init writes via `WriteConfig` → whole-struct encode; field tag + value suffices) |
 | `prompts list/show/validate` alias awareness | [specs/commands/prompts.md](specs/commands/prompts.md) | `internal/cli/prompts.go` | — | ❌ Missing (hardcoded `build`/`plan` cases at `prompts.go:177-181, 201-212, 291-303`) |
-| E2E `[prompt-overrides.build]` migration | [specs/config-by-prompt.md](specs/config-by-prompt.md) (keys use resolved name), build-subagents.md Migration notes | `test/e2e/config_by_prompt_test.go`, `test/e2e/config_local_test.go` | — | ❌ Uses `build` key; silently stops applying once alias lands |
+| E2E `[prompt-overrides.build]` migration | [specs/config-by-prompt.md](specs/config-by-prompt.md) (keys use resolved name), build-subagents.md Migration notes | `test/e2e/config_by_prompt_test.go`, `test/e2e/config_local_test.go` | — | ⚠️ Partial (keys migrated to `build-classic` in `256ff02` — required by the per-commit coverage gate; escape-hatch case + new alias e2e coverage remain in Phase 6) |
 | README / user docs | README.md | `README.md` | — | ❌ Documents pre-alias world (`build`/`plan` only, no alias, no `build-alias-prompt`) |
 
 **Related domains already spec-updated (no spec work needed):** `specs/prompts.md`, `specs/configuration.md`, `specs/commands/init.md`, `specs/commands/prompts.md`, `specs/config-by-prompt.md`, `specs/config-local-overlay.md`, `specs/README.md` — all aligned to the alias model in commits `0c17456`, `2c73cd6`, `6ed845e`.
@@ -78,19 +78,19 @@
 
 **Goal:** `build` rewrites to `BuildAliasPrompt` before resolution, in every entry point, exactly once.
 
-**Status:** ❌ Not started
+**Status:** ✅ Complete (`256ff02`)
 
 **Paths:**
 - `internal/cli/run.go` (`runCommandLogic` `:40-94` — the single shared entry for bare `ralph`, `ralph build`, `ralph run build`; spec architecture calls this "cmd.go invocation entry" but both Cobra entrypoints converge here)
 - `internal/cli/run_test.go`
 
 **Checklist:**
-- [ ] Rewrite after `cfg.LoadConfig()` (`:54`), before `prompt.GetPrompt` (`:77`): if `promptName == "build"` and `cfg.BuildAliasPrompt != "build"`, set `promptName = cfg.BuildAliasPrompt`
-- [ ] Downstream layers observe only the rewritten name: `prompt-overrides` lookup (`applyEffectiveSettings` `:90`), loop banners, `RunLoop` prompt name — no further plumbing needed, verify via tests
-- [ ] Self-alias escape hatch: `build-alias-prompt = "build"` skips rewrite; with `PromptsDir/build.md` present the file is used (pre-alias behavior); without it, resolution fails (`build` is not a built-in)
-- [ ] Unknown target `build-alias-prompt = "nope"` fails with the existing prompt-not-found error before loop start; `ralph plan` unaffected
-- [ ] Empty/absent value resolves to `build-classic` (Phase 1 default)
-- [ ] Inline/stdin/explicit `--prompt-file` sources are unchanged by the rewrite (rewrite only affects name-based resolution steps)
+- [x] Rewrite after `cfg.LoadConfig()` (`:54`), before `prompt.GetPrompt` (`:77`): if `promptName == "build"` and `cfg.BuildAliasPrompt != "build"`, set `promptName = cfg.BuildAliasPrompt`
+- [x] Downstream layers observe only the rewritten name: `prompt-overrides` lookup (`applyEffectiveSettings` `:90`), loop banners, `RunLoop` prompt name — no further plumbing needed, verify via tests
+- [x] Self-alias escape hatch: `build-alias-prompt = "build"` skips rewrite; with `PromptsDir/build.md` present the file is used (pre-alias behavior); without it, resolution fails (`build` is not a built-in)
+- [x] Unknown target `build-alias-prompt = "nope"` fails with the existing prompt-not-found error before loop start; `ralph plan` unaffected
+- [x] Empty/absent value resolves to `build-classic` (Phase 1 default)
+- [x] Inline/stdin/explicit `--prompt-file` sources are unchanged by the rewrite (rewrite only affects name-based resolution steps)
 
 **Definition of Done:** failing tests first (default alias, opt-in target, escape hatch with and without file, unknown target error, `plan` unaffected); `make lint` clean.
 
@@ -157,7 +157,7 @@
 - New e2e coverage for alias behavior
 
 **Checklist:**
-- [ ] Migrate `[prompt-overrides.build]` e2e keys to `build-classic` (spec migration note: overrides keyed by resolved name); alternatively cover the escape hatch (`build-alias-prompt = "build"`) in one case to pin legacy-key behavior
+- [x] Migrate `[prompt-overrides.build]` e2e keys to `build-classic` (spec migration note: overrides keyed by resolved name) — done in `256ff02` (per-commit coverage gate required green e2e); alternatively cover the escape hatch (`build-alias-prompt = "build"`) in one case to pin legacy-key behavior
 - [ ] New e2e: default `ralph build` == `build-classic` output; `build-alias-prompt = "build-subagents"` in TOML → batch prompt emitted; unknown alias target fails before agent execution
 - [ ] E2E init coverage: generated TOML contains `build-alias-prompt = "build-subagents"` (init is TTY-gated; use existing non-TTY init test pattern for the config-write portion)
 - [ ] README: built-in prompts are `build-classic`/`build-subagents`/`plan`, `build` alias + `build-alias-prompt` documented, `prompts list` sample updated
@@ -207,6 +207,16 @@
 - 2026-09-15: e2e not run — expected red on the 5 cases resolving bundled `build` (`config_precedence` NoSpecsIndex, `plan_flags`, `specs_flags` ×2) and the 2 `[prompt-overrides.build]` cases; Phase 3's rewrite heals the first group, Phase 6's migration the second. This is the documented interim state between phases.
 - 2026-09-15: commit `d1271b2` — `feat(prompt): register build-classic and build-subagents built-in prompts` (4 files, +228/−26).
 
+### 2026-09-15: Phase 3 — `build` Alias Rewrite at Invocation Entry
+
+- 2026-09-15: `go test ./internal/cli/ -run TestRunBuildAliasRewrite` (pre-implementation) — RED confirmed: 4/7 cases fail with `prompt file not found for 'build'` (default alias, config target, flag override, unknown target — none observe a rewrite); escape-hatch and plan-unaffected guards green as expected.
+- 2026-09-15: implementation — `rewriteBuildAlias(promptName, aliasTarget)` applied once in `runCommandLogic` after `applyEnvFlagOverrides`, before `GetPrompt`; escape hatch (`target == "build"`) and non-`build` names pass through unchanged. Single shared helper in `run.go`, reusable by Phase 5.
+- 2026-09-15: same tests (post-implementation) — 7/7 PASS: default `build` → `BUILD-CLASSIC` banner + `[build-classic]` loop banner; `build-alias-prompt = "build-subagents"` → batch prompt markers; `--build-alias-prompt build-classic` overrides TOML; escape hatch uses `$HOME/.ralph/build.md` (`USING PROMPT FILE`, `[build]` banner) and fails resolution without it; unknown target `nope` fails before `Starting Specralph`; `plan` unaffected.
+- 2026-09-15: migrated pre-alias expectations — `TestNewRalphCommandDefaultToBuild` (dropped the Phase 2 `build.md` crutch; asserts `[build-classic]`), 3× `[prompt-overrides.build]` unit keys → `build-classic` (`cmd_config_test.go`), e2e `RunDefaultsToBuildPrompt` banner → `[build-classic]`.
+- 2026-09-15: `make test-e2e` — 2 failures (`TestE2EConfigByPromptOverrideFromConfigApplies`, `TestE2EConfigLocalOverlay_PromptOverridesDeepMerge`): `[prompt-overrides.build]` keys stopped applying — exactly the Phase 6 risk, but the per-commit coverage gate blocks red e2e. Key migration pulled forward into this commit: both e2e files key overrides by `build-classic` while still invoking positional `build` (proving invocation `build` → resolved-name keys end-to-end). E2E fully green afterwards.
+- 2026-09-15: `go test ./internal/...` — PASS; coverage 95.8% (gate ≥95%). `make lint` — 0 issues (after extracting the alias test table into a package var for `funlen`).
+- 2026-09-15: commit `256ff02` — `feat(cli): rewrite build alias at invocation entry` (7 files, +184/−20).
+
 ---
 
 ## Summary
@@ -215,12 +225,12 @@
 |-------|-------------|--------|------------|
 | 1 | `BuildAliasPrompt` config field (flag/env/TOML/overlay) | ✅ Complete | 100% |
 | 2 | Built-in prompt registry + `build-subagents` generator | ✅ Complete | 100% |
-| 3 | `build` alias rewrite at invocation entry | ❌ Not started | 0% |
+| 3 | `build` alias rewrite at invocation entry | ✅ Complete | 100% |
 | 4 | `ralph init` unconditional opt-in | ❌ Not started | 0% |
 | 5 | `prompts` CLI alias awareness (list/show/validate) | ❌ Not started | 0% |
 | 6 | Migration, e2e, README/docs | ❌ Not started | 0% |
 
-**Remaining Effort:** Phases 3–6. Phase 3 (alias rewrite in `runCommandLogic`) is what restores bare `ralph build` — until it lands, `build` resolves only via a `PromptsDir/build.md` file or the Phase 3 rewrite; `internal/cli` unit tests were migrated accordingly (`d1271b2`).
+**Remaining Effort:** Phases 4–6 (`ralph init` opt-in, `prompts` CLI alias awareness, docs/mutation). Phase 5 reuses `rewriteBuildAlias` (`internal/cli/run.go`) — single implementation of the rewrite rule. Phase 6 remainder: escape-hatch e2e case, new alias e2e coverage, init e2e, README.
 
 ---
 
