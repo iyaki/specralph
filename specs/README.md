@@ -21,6 +21,7 @@ Design docs and technical specifications
 - [agent-env-overrides.md](agent-env-overrides.md)
 - [agents.md](agents.md)
 - [build-subagents.md](build-subagents.md) — Build prompt with subagents (up to 10 tasks, at least one subagent each) and the configurable `build` alias
+- [built-in-prompts.md](built-in-prompts.md) — Content contracts for the built-in `build-classic` and `plan` prompts
 - [config-by-prompt.md](config-by-prompt.md)
 - [config-local-overlay.md](config-local-overlay.md)
 - [configuration.md](configuration.md)
