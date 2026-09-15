@@ -1,6 +1,6 @@
 # Implementation Plan (prompts/build-*)
 
-**Status:** In Progress (4/6 phases) — Phase 1 (`93cb6af`): `BuildAliasPrompt` first-class config value. Phase 2 (`d1271b2`): `build-classic`/`build-subagents` registered, `build` removed from built-ins. Phase 3 (`256ff02`): `build` alias rewrite at invocation entry. Phase 4 (`c7de4b9`): `ralph init` unconditional opt-in. Phases 5–6 remain.
+**Status:** In Progress (5/6 phases) — Phase 1 (`93cb6af`): `BuildAliasPrompt` first-class config value. Phase 2 (`d1271b2`): `build-classic`/`build-subagents` registered, `build` removed from built-ins. Phase 3 (`256ff02`): `build` alias rewrite at invocation entry. Phase 4 (`c7de4b9`): `ralph init` unconditional opt-in. Phase 5 (`2906aa4`): `prompts` CLI alias-aware. Phase 6 remains.
 **Last Updated:** 2026-09-15
 **Primary Spec(s):** [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md), [specs/prompts/build-classic.md](specs/prompts/build-classic.md), [specs/prompts.md](specs/prompts.md)
 
@@ -15,7 +15,7 @@
 | `build` alias rewrite at invocation entry | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) (Workflows), [specs/prompts.md](specs/prompts.md) | `internal/cli/run.go` (`runCommandLogic` — shared entry of root cmd and `run` subcommand) | — | ✅ Done (`256ff02`: `rewriteBuildAlias` applied once after config load; shared helper reusable by Phase 5) |
 | `BuildAliasPrompt` config field (flag/env/TOML/overlay) | [specs/configuration.md](specs/configuration.md) (canonical tables), [build-subagents.md](specs/prompts/build-subagents.md) | `internal/config/config.go`, `internal/cli/run.go` (`setupSharedFlags`) | — | ✅ Done (`93cb6af`: field `toml:"build-alias-prompt"` no omitempty, `--build-alias-prompt` flag, `RALPH_BUILD_ALIAS_PROMPT`, overlay merge, default `build-classic`) |
 | `ralph init` unconditional opt-in | [specs/commands/init.md](specs/commands/init.md) | `internal/cli/init.go` (`buildConfigFromAnswers`), `internal/config/writer.go` | — | ✅ Done (`c7de4b9`: constant value in `buildConfigFromAnswers`; Phase 1 tag makes `WriteConfig` always emit the key; overwrite regeneration replaces prior value) |
-| `prompts list/show/validate` alias awareness | [specs/commands/prompts.md](specs/commands/prompts.md) | `internal/cli/prompts.go` | — | ❌ Missing (hardcoded `build`/`plan` cases at `prompts.go:177-181, 201-212, 291-303`) |
+| `prompts list/show/validate` alias awareness | [specs/commands/prompts.md](specs/commands/prompts.md) | `internal/cli/prompts.go` | — | ✅ Done (`2906aa4`: three built-ins + `Aliases:` section in list; show/validate resolve via the shared `rewriteBuildAlias`; `validate build-subagents` reports all checks ok) |
 | E2E `[prompt-overrides.build]` migration | [specs/config-by-prompt.md](specs/config-by-prompt.md) (keys use resolved name), build-subagents.md Migration notes | `test/e2e/config_by_prompt_test.go`, `test/e2e/config_local_test.go` | — | ⚠️ Partial (keys migrated to `build-classic` in `256ff02` — required by the per-commit coverage gate; escape-hatch case + new alias e2e coverage remain in Phase 6) |
 | README / user docs | README.md | `README.md` | — | ❌ Documents pre-alias world (`build`/`plan` only, no alias, no `build-alias-prompt`) |
 
@@ -124,18 +124,18 @@
 
 **Goal:** The prompts surface matches `specs/commands/prompts.md`: three built-ins, an Aliases section, and `build` following the alias.
 
-**Status:** ❌ Not started
+**Status:** ✅ Complete (`2906aa4`)
 
 **Paths:**
 - `internal/cli/prompts.go` (`runPromptsList` `:201-229`, `runPromptsShow` `:291-326`, `resolveValidationTarget` `:163-193`)
 - `internal/cli/prompts_test.go`
 
 **Checklist:**
-- [ ] `prompts list` built-ins: `build-classic` (single-task description), `build-subagents` (batch description per spec sample), `plan` — replacing the hardcoded two-line block; `Aliases:` section with `build -> <target> (configurable via build-alias-prompt)`
-- [ ] `prompts show build` prints the target prompt content (rewrites via the same rule; `prompts show build-classic` / `build-subagents` print their built-ins)
-- [ ] `resolveValidationTarget` built-in set extended to the three names, alias-aware for `build` (so `prompts validate build-subagents` reports all checks ok per spec verification)
-- [ ] List description text matches spec sample (`build-classic`: "Implement a single task…"; `build-subagents`: "Pick up to 10 tasks… at least one subagent per task")
-- [ ] Existing `prompts_test.go` assertions updated: list contains the three built-ins + alias line; show-build still yields "Agent Instructions (Build Mode)" via alias→classic
+- [x] `prompts list` built-ins: `build-classic` (single-task description), `build-subagents` (batch description per spec sample), `plan` — replacing the hardcoded two-line block; `Aliases:` section with `build -> <target> (configurable via build-alias-prompt)`
+- [x] `prompts show build` prints the target prompt content (rewrites via the same rule; `prompts show build-classic` / `build-subagents` print their built-ins)
+- [x] `resolveValidationTarget` built-in set extended to the three names, alias-aware for `build` (so `prompts validate build-subagents` reports all checks ok per spec verification)
+- [x] List description text matches spec sample (`build-classic`: "Implement a single task…"; `build-subagents`: "Pick up to 10 tasks… at least one subagent per task")
+- [x] Existing `prompts_test.go` assertions updated: list contains the three built-ins + alias line; show-build still yields "Agent Instructions (Build Mode)" via alias→classic
 
 **Definition of Done:** failing tests first; `make lint` clean; manual `./bin/ralph prompts list` / `show build` / `validate build-subagents` match spec sample outputs.
 
@@ -223,6 +223,15 @@
 - 2026-09-15: same tests (post-implementation) — PASS; `go test ./internal/...` — PASS; coverage 95.8% (gate ≥95%); `make lint` — 0 issues.
 - 2026-09-15: commit `c7de4b9` — `feat(cli): opt generated configs into build-subagents unconditionally` (2 files, +43).
 
+### 2026-09-15: Phase 5 — `prompts` CLI Alias Awareness
+
+- 2026-09-15: `go test ./internal/cli/ -run 'TestPromptsListShowsBuiltInPrompts|TestPromptsListAliasFollowsConfig|TestPromptsShowBuildSubagents|TestPromptsShowBuildFollowsAliasConfig|TestPromptsValidateBuiltIn'` (pre-implementation) — RED confirmed: list lacks `build-classic`/`build-subagents`/`Aliases:`; `show build-subagents` and `validate build-subagents` fail `prompt "build-subagents" not found`; `show build` ignores `RALPH_BUILD_ALIAS_PROMPT`; validate prints raw `build` instead of the resolved target.
+- 2026-09-15: implementation — `runPromptsList` lists the three built-ins (spec sample descriptions, 80-char truncation, `%-15s` alignment) plus an unconditional `Aliases:` line driven by `cfg.BuildAliasPrompt`; `runPromptsShow` and `resolveValidationTarget` apply the shared `rewriteBuildAlias` (single implementation of the rewrite rule) and resolve `build-classic`/`build-subagents`/`plan`; escape hatch (`build-alias-prompt = "build"`) falls through to the PromptsDir lookup, preserving pre-alias behavior.
+- 2026-09-15: same tests (post-implementation) — PASS. `TestPromptsValidateBuiltIn` consolidated into a table over `build`/`build-classic`/`build-subagents`/`plan` asserting the resolved display name (pins the alias rewrite) and all checks ok — also cleared the `dupl` lint finding from two near-identical tests.
+- 2026-09-15: `./bin/ralph prompts list` — matches the spec sample: three built-ins, `Aliases:` with `build -> build-classic (configurable via build-alias-prompt)`, usage footer. `./bin/ralph prompts show build` — prints the build-classic content. `./bin/ralph prompts validate build-subagents` — `0 failed, 0 warnings`.
+- 2026-09-15: `make lint` — 0 issues. `make quality` — PASS (coverage gate ≥95%, gosec/govulncheck/go-arch-lint clean). `go test ./test/e2e/ -count=1` — PASS.
+- 2026-09-15: commit `2906aa4` — `feat(cli): make prompts commands build-alias aware` (2 files, +119/−45).
+
 ---
 
 ## Summary
@@ -233,10 +242,10 @@
 | 2 | Built-in prompt registry + `build-subagents` generator | ✅ Complete | 100% |
 | 3 | `build` alias rewrite at invocation entry | ✅ Complete | 100% |
 | 4 | `ralph init` unconditional opt-in | ✅ Complete | 100% |
-| 5 | `prompts` CLI alias awareness (list/show/validate) | ❌ Not started | 0% |
+| 5 | `prompts` CLI alias awareness (list/show/validate) | ✅ Complete | 100% |
 | 6 | Migration, e2e, README/docs | ❌ Not started | 0% |
 
-**Remaining Effort:** Phases 5–6 (`prompts` CLI alias awareness, docs/mutation). Phase 5 reuses `rewriteBuildAlias` (`internal/cli/run.go`) — single implementation of the rewrite rule. Phase 6 remainder: escape-hatch e2e case, new alias e2e coverage, init e2e, README.
+**Remaining Effort:** Phase 6 only (escape-hatch e2e case, new alias e2e coverage, init e2e coverage, README, `make mutation` at final stage).
 
 ---
 
