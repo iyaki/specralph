@@ -26,6 +26,110 @@ func TestBuildPromptIncludesConfiguredReferences(t *testing.T) {
 	}
 }
 
+func TestBuildSubagentsPromptMatchesSpecOutline(t *testing.T) {
+	cfg := &config.Config{
+		SpecsDir:               "specs",
+		SpecsIndexFile:         "README.md",
+		ImplementationPlanName: "IMPLEMENTATION_PLAN.md",
+	}
+	want := joinSpecOutlineLines(
+		"# Agent Instructions (Build Mode with Subagents)",
+		"",
+		"- Study `specs/*` (including `specs/README.md` and related specs).",
+		"- Study `IMPLEMENTATION_PLAN.md` and select the next pending tasks, up to a maximum of 10.",
+		"- If no tasks are pending, verify the plan is complete and reply with `<COMPLETION_SIGNAL>`.",
+		"",
+		"## Task Execution",
+		"",
+		"- Dispatch at least one subagent per selected task using the agent CLI's native",
+		"  subagent mechanism.",
+		"- Give each subagent a self-contained brief: the task, relevant spec paths, and",
+		"  validation commands.",
+		"- Orchestrate only: tasks are implemented by subagents, not directly in the main context.",
+		"- After each task: validate, update `IMPLEMENTATION_PLAN.md`, and commit code and",
+		"  plan update together.",
+		"- If a task fails, record it in the plan as not complete and continue with the",
+		"  remaining selected tasks.",
+		"",
+		"## Stop Condition",
+		"",
+		"- After the selected batch, stop. Do NOT pick up more tasks in the same run.",
+		"- If and only if ALL stories are complete and passing, reply with `<COMPLETION_SIGNAL>`.",
+		"",
+		"## IMPORTANT",
+		"",
+		"- Before changes, search the codebase. Do NOT assume functionality is missing.",
+		"- Use the verification log format: `YYYY-MM-DD: <command or URL> - <result>`.",
+		"- Keep a `Manual Deployment Tasks` section in the plan and use `None` when there are no tasks.",
+		"- You may add temporary logging as needed and remove if no longer needed.",
+		"",
+	)
+	if got := prompt.BuildSubagentsPrompt(cfg); got != want {
+		t.Fatalf("build-subagents prompt does not match spec outline:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestBuildSubagentsPromptNoSpecsIndexOmitsParenthetical(t *testing.T) {
+	cfg := &config.Config{
+		SpecsDir:               "specs",
+		SpecsIndexFile:         "README.md",
+		NoSpecsIndex:           true,
+		ImplementationPlanName: "IMPLEMENTATION_PLAN.md",
+	}
+	p := prompt.BuildSubagentsPrompt(cfg)
+	if strings.Contains(p, "including") {
+		t.Fatalf("expected specs index parenthetical to be omitted, got:\n%s", p)
+	}
+	if !strings.Contains(p, "- Study `specs/*`.") {
+		t.Fatalf("expected bare specs study line, got:\n%s", p)
+	}
+}
+
+func TestBuiltInPromptSpecMarkers(t *testing.T) {
+	cfg := &config.Config{
+		SpecsDir:               "specs",
+		SpecsIndexFile:         "README.md",
+		ImplementationPlanName: "IMPLEMENTATION_PLAN.md",
+	}
+	classic := prompt.BuildPrompt(cfg)
+	subagents := prompt.BuildSubagentsPrompt(cfg)
+	tests := []struct {
+		name    string
+		content string
+		marker  string
+	}{
+		// specs/prompts/build-classic.md verifications
+		{"build-classic title", classic, "# Agent Instructions (Build Mode)"},
+		{"build-classic single task", classic, "pick the single most important task"},
+		{"build-classic stop condition", classic, "Do NOT start another task in the same run"},
+		{"build-classic verification log format", classic, "YYYY-MM-DD: <command or URL> - <result>"},
+		{"build-classic manual deployment tasks", classic, "Manual Deployment Tasks"},
+		{"build-classic completion signal", classic, "<COMPLETION_SIGNAL>"},
+		// specs/prompts/build-subagents.md verifications
+		{"build-subagents title", subagents, "# Agent Instructions (Build Mode with Subagents)"},
+		{"build-subagents 10-task cap", subagents, "up to a maximum of 10"},
+		{"build-subagents at-least-one-subagent rule", subagents, "at least one subagent per selected task"},
+		{"build-subagents orchestrate-only", subagents, "Orchestrate only"},
+		{"build-subagents per-task validate/commit/plan-update", subagents,
+			"After each task: validate, update `IMPLEMENTATION_PLAN.md`"},
+		{"build-subagents failed-task record-and-continue", subagents, "record it in the plan as not complete"},
+		{"build-subagents stop after batch", subagents, "Do NOT pick up more tasks in the same run"},
+		{"build-subagents signal only when all complete", subagents, "If and only if ALL stories are complete and passing"},
+		{"build-subagents completion signal", subagents, "<COMPLETION_SIGNAL>"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !strings.Contains(tt.content, tt.marker) {
+				t.Fatalf("expected marker %q in content:\n%s", tt.marker, tt.content)
+			}
+		})
+	}
+}
+
+func joinSpecOutlineLines(lines ...string) string {
+	return strings.Join(lines, "\n") + "\n"
+}
+
 func TestPlanPromptIncludesScopeAndPlanName(t *testing.T) {
 	cfg := &config.Config{ImplementationPlanName: "PLAN.md", SpecsDir: "specs"}
 	p := prompt.PlanPrompt(cfg, "API")
@@ -114,15 +218,33 @@ func TestGetPromptFromPromptsDir(t *testing.T) {
 	}
 }
 
-func TestGetPromptDefaultBuildAndPlan(t *testing.T) {
+func TestGetPromptBundledBuiltIns(t *testing.T) {
 	cfg := &config.Config{SpecsDir: "specs", SpecsIndexFile: "README.md", ImplementationPlanName: "PLAN.md"}
 
-	buildPrompt, _, err := prompt.GetPrompt(cfg, "build", "scope", &bytes.Buffer{})
+	var classicOut bytes.Buffer
+	classicPrompt, _, err := prompt.GetPrompt(cfg, "build-classic", "scope", &classicOut)
 	if err != nil {
-		t.Fatalf("unexpected error for build: %v", err)
+		t.Fatalf("unexpected error for build-classic: %v", err)
 	}
-	if !strings.Contains(buildPrompt, "Agent Instructions (Build Mode)") {
-		t.Fatalf("unexpected build prompt: %q", buildPrompt)
+	if classicPrompt != prompt.BuildPrompt(cfg) {
+		t.Fatalf("build-classic output must be byte-identical to BuildPrompt:\n got: %q\nwant: %q",
+			classicPrompt, prompt.BuildPrompt(cfg))
+	}
+	if !strings.Contains(classicOut.String(), "USING DEFAULT 'BUILD-CLASSIC' PROMPT") {
+		t.Fatalf("expected build-classic banner, got: %q", classicOut.String())
+	}
+
+	var subagentsOut bytes.Buffer
+	subagentsPrompt, _, err := prompt.GetPrompt(cfg, "build-subagents", "scope", &subagentsOut)
+	if err != nil {
+		t.Fatalf("unexpected error for build-subagents: %v", err)
+	}
+	if subagentsPrompt != prompt.BuildSubagentsPrompt(cfg) {
+		t.Fatalf("build-subagents output must equal BuildSubagentsPrompt:\n got: %q\nwant: %q",
+			subagentsPrompt, prompt.BuildSubagentsPrompt(cfg))
+	}
+	if !strings.Contains(subagentsOut.String(), "USING DEFAULT 'BUILD-SUBAGENTS' PROMPT") {
+		t.Fatalf("expected build-subagents banner, got: %q", subagentsOut.String())
 	}
 
 	planPrompt, _, err := prompt.GetPrompt(cfg, "plan", "My Scope", &bytes.Buffer{})
@@ -131,6 +253,19 @@ func TestGetPromptDefaultBuildAndPlan(t *testing.T) {
 	}
 	if !strings.Contains(planPrompt, "Scope: My Scope") {
 		t.Fatalf("unexpected plan prompt: %q", planPrompt)
+	}
+}
+
+func TestGetPromptBuildNameIsNotBuiltIn(t *testing.T) {
+	cfg := &config.Config{SpecsDir: "specs", SpecsIndexFile: "README.md", ImplementationPlanName: "PLAN.md"}
+	_, _, err := prompt.GetPrompt(cfg, "build", "scope", &bytes.Buffer{})
+	if err == nil {
+		t.Fatal("expected error for plain build name; alias rewrite lives in the CLI layer")
+	}
+	for _, name := range []string{"build-classic", "build-subagents", "plan"} {
+		if !strings.Contains(err.Error(), name) {
+			t.Fatalf("expected error to list built-in %q, got: %v", name, err)
+		}
 	}
 }
 
