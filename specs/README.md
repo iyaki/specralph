@@ -2,6 +2,8 @@
 
 Design docs and technical specifications
 
+Author new specs with the `spec-creator` skill (`.agents/skills/spec-creator`), and add completed specs to the lists below.
+
 ## Vision and Goals
 
 - [vision-goals.md](vision-goals.md)

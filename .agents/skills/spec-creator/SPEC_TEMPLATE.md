@@ -2,6 +2,8 @@
 
 Status: Proposed | Implemented
 
+> Write every section in terms of intended behavior: what the system must do and why, never how. No implementation details and no references to source code.
+
 ## Overview
 
 ### Purpose
@@ -21,15 +23,13 @@ Status: Proposed | Implemented
 
 - Define the boundaries of the feature, including what is included and excluded.
 
-## Architecture
+## High-Level Design
 
-### Module/package layout (tree format)
+### Components and responsibilities
 
-- High-level organization of code components.
-
-### Component diagram (ASCII)
-
-- Visual representation of how components interact.
+- Describe the conceptual components, their responsibilities, and how they interact.
+- Name components by role; never by file, package, class, or function names.
+- Optionally include an ASCII diagram of how the components interact.
 
 ### Data flow summary
 
@@ -40,7 +40,7 @@ Status: Proposed | Implemented
 ### Core Entities
 
 - Define primary entities with types and fields
-- Include code snippets in the target language, only as reference. The only valid source of truth are the written definition and the source code itself, these code snippets are just to clarify the written definition
+- Define fields with logical, language-neutral types; do not include code snippets.
 - Explain relationships between entities
 
 ### Relationships
@@ -49,13 +49,14 @@ Status: Proposed | Implemented
 
 ### Persistence Notes
 
-- Schema definitions (as a table with SQL types)
-- Indexing and constraints
+- Persistence requirements as a logical model: what is stored, its fields, types, and constraints.
+- State durability expectations (e.g. data survives restarts) without prescribing the storage technology or SQL dialect.
 
 ## Workflows
 
 - Step-by-step flows for critical operations
 - Include both happy path and error/merge cases
+- Describe intended, observable behavior: inputs or triggers, expected outcomes, and error handling.
 
 ## APIs
 
@@ -84,22 +85,21 @@ Status: Proposed | Implemented
 - Validation rules
 - Key management
 
-## Dependencies
+## Technical Constraints
 
-- Library list with rationale where needed
+- External systems, protocols, compatibility, and performance requirements the implementation must satisfy, with rationale.
 
 ## Open Questions / Risks
 
 ## Verifications
 
-Section with 3-5 objective checks.  
+Section with 3-5 objective checks, each stating an observable behavior rather than a test suite or tool.
 Examples:
 
-- Tests pass for capture + identify flows.
-- Automated Unit tests
-- Automated e2e tests with Playwright
-- API returns 401 without key.
-- Schema migration applies cleanly on empty DB.
+- Requests without a valid key are rejected with 401.
+- Data persists across restarts.
+- Invalid input produces a descriptive validation error.
+- The command completes within the stated performance constraint for a typical input.
 
 ## Appendices
 
