@@ -1,6 +1,6 @@
 # Implementation Plan (prompts/build-*)
 
-**Status:** In Progress (1/6 phases) — Phase 1 complete (`93cb6af`): `BuildAliasPrompt` is a first-class config value with flag/env/TOML/overlay support and `build-classic` default. Phases 2–6 remain.
+**Status:** In Progress (2/6 phases) — Phase 1 (`93cb6af`): `BuildAliasPrompt` first-class config value. Phase 2 (`d1271b2`): `build-classic`/`build-subagents` registered, `build` removed from built-ins (alias rewrite pending in Phase 3). Phases 3–6 remain.
 **Last Updated:** 2026-09-15
 **Primary Spec(s):** [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md), [specs/prompts/build-classic.md](specs/prompts/build-classic.md), [specs/prompts.md](specs/prompts.md)
 
@@ -10,8 +10,8 @@
 
 | System/Subsystem | Spec | Module/Package | Artifacts | Status |
 |------------------|------|----------------|-----------|--------|
-| `build-classic` built-in (content contract) | [specs/prompts/build-classic.md](specs/prompts/build-classic.md) | `internal/prompt/prompts.go` (`BuildPrompt`) | — | ✅ Content exists as `BuildPrompt`; ❌ `build-classic` name not registered (`bundledPrompt` accepts only `build`/`plan`, `prompts.go:129-145`) |
-| `build-subagents` built-in (batch prompt) | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) | `internal/prompt/prompts.go` (new `BuildSubagentsPrompt`) | — | ❌ Missing (grep: no hits in `internal/`) |
+| `build-classic` built-in (content contract) | [specs/prompts/build-classic.md](specs/prompts/build-classic.md) | `internal/prompt/prompts.go` (`BuildPrompt`) | — | ✅ Done (`d1271b2`: `bundledPrompt` serves `build-classic`; output byte-identical to former `build` prompt, verified against git HEAD generator) |
+| `build-subagents` built-in (batch prompt) | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) | `internal/prompt/prompts.go` (`BuildSubagentsPrompt`) | — | ✅ Done (`d1271b2`: generator matches spec Appendix outline exactly; shared `specsStudyLine` helper) |
 | `build` alias rewrite at invocation entry | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) (Workflows), [specs/prompts.md](specs/prompts.md) | `internal/cli/run.go` (`runCommandLogic` — shared entry of root cmd and `run` subcommand) | — | ❌ Missing (`GetPrompt` has no rewrite step, `prompts.go:22-46`) |
 | `BuildAliasPrompt` config field (flag/env/TOML/overlay) | [specs/configuration.md](specs/configuration.md) (canonical tables), [build-subagents.md](specs/prompts/build-subagents.md) | `internal/config/config.go`, `internal/cli/run.go` (`setupSharedFlags`) | — | ✅ Done (`93cb6af`: field `toml:"build-alias-prompt"` no omitempty, `--build-alias-prompt` flag, `RALPH_BUILD_ALIAS_PROMPT`, overlay merge, default `build-classic`) |
 | `ralph init` unconditional opt-in | [specs/commands/init.md](specs/commands/init.md) | `internal/cli/init.go` (`buildConfigFromAnswers`), `internal/config/writer.go` | — | ❌ Missing (init writes via `WriteConfig` → whole-struct encode; field tag + value suffices) |
@@ -55,18 +55,18 @@
 
 **Goal:** `bundledPrompt` serves the three spec built-ins; the batch generator exists per the spec outline.
 
-**Status:** ❌ Not started
+**Status:** ✅ Complete (`d1271b2`)
 
 **Paths:**
 - `internal/prompt/prompts.go` (`bundledPrompt` `:129-145`, new generator)
 - `internal/prompt/prompts_test.go`
 
 **Checklist:**
-- [ ] `BuildSubagentsPrompt(cfg *config.Config) string` — generated text matches the spec Appendix outline exactly: 10-task cap, at-least-one-subagent-per-task rule, orchestrate-only constraint, per-task validate/commit/plan-update, failed-task record-and-continue, stop-after-batch, signal only when ALL tasks complete; `<SpecsDir>`/`<SpecsIndexFile>`/`<ImplementationPlanName>` substitutions shared with `BuildPrompt` (reuse the index-reference computation, do not duplicate)
-- [ ] `bundledPrompt` cases: `build-classic` → `BuildPrompt` + banner naming the resolved built-in; `build-subagents` → `BuildSubagentsPrompt` + banner; `plan` unchanged
-- [ ] `build` removed from built-ins: error message lists `build-classic`, `build-subagents`, `plan` (alias rewrite in Phase 3 is what makes plain `build` work)
-- [ ] `build-classic` output byte-identical to current `BuildPrompt` output (backwards-compat reference, spec verification: "`ralph build-classic` output equals the former `build` prompt text")
-- [ ] Table tests: `build-subagents` contains every spec-mandated marker; `build-classic` markers per build-classic.md verifications
+- [x] `BuildSubagentsPrompt(cfg *config.Config) string` — generated text matches the spec Appendix outline exactly: 10-task cap, at-least-one-subagent-per-task rule, orchestrate-only constraint, per-task validate/commit/plan-update, failed-task record-and-continue, stop-after-batch, signal only when ALL tasks complete; `<SpecsDir>`/`<SpecsIndexFile>`/`<ImplementationPlanName>` substitutions shared with `BuildPrompt` (reuse the index-reference computation, do not duplicate)
+- [x] `bundledPrompt` cases: `build-classic` → `BuildPrompt` + banner naming the resolved built-in; `build-subagents` → `BuildSubagentsPrompt` + banner; `plan` unchanged
+- [x] `build` removed from built-ins: error message lists `build-classic`, `build-subagents`, `plan` (alias rewrite in Phase 3 is what makes plain `build` work)
+- [x] `build-classic` output byte-identical to current `BuildPrompt` output (backwards-compat reference, spec verification: "`ralph build-classic` output equals the former `build` prompt text")
+- [x] Table tests: `build-subagents` contains every spec-mandated marker; `build-classic` markers per build-classic.md verifications
 
 **Definition of Done:** failing tests first; `go test ./internal/prompt/` passes; `make lint` clean.
 
@@ -195,6 +195,18 @@
 - 2026-09-15: `make lint` — 0 issues after wrapping the two over-limit lines to match existing repo style (multi-line `resolveString`, continuation-string flag usage).
 - 2026-09-15: commit `93cb6af` — `feat(config): add BuildAliasPrompt field with full precedence support` (6 files, +129).
 
+### 2026-09-15: Phase 2 — Built-in Prompt Registry (`build-classic`, `build-subagents`)
+
+- 2026-09-15: `go test ./internal/prompt/` (pre-implementation) — RED confirmed: `BuildSubagentsPrompt undefined` (missing feature, not test typos). New tests: exact spec-outline match, `NoSpecsIndex` parenthetical omission, spec-marker table (6 classic + 9 subagents markers), bundled resolution byte-equality + named banners, `build` no longer a built-in with error listing all three names.
+- 2026-09-15: implementation — `bundledPrompt` cases `build-classic`/`build-subagents`/`plan` with named banners (`USING DEFAULT 'BUILD-CLASSIC' PROMPT` etc.); index-reference computation extracted into `specsStudyLine` shared by `BuildPrompt` and `BuildSubagentsPrompt` (no duplication); not-found error lists the three built-ins.
+- 2026-09-15: byte-identical check — throwaway test compared refactored `BuildPrompt` against the git-HEAD generator across 4 configs (with index, `NoSpecsIndex`, no index file, empty) — PASS, throwaway deleted. build-classic.md content contract unchanged.
+- 2026-09-15: grep for `USING DEFAULT|pre-bundled prompts` in test sources — no e2e/unit assertion pins the old banner or old error text (only `.ralph/logs` runtime logs). Phase 2 risk note cleared.
+- 2026-09-15: migrated `internal/cli` unit tests that invoke bare `build` with no prompt source (would fail until Phase 3 restores it): `cmd_test.go` debug happy path and default-name routing (now backed by a `~/.ralph/build.md` prompts-dir file), `run_test.go` debug happy path (`[build-classic]` banner) and built-in-silence case. `cmd_config_test.go` untouched (explicit `--prompt-file` short-circuits before bundled resolution).
+- 2026-09-15: `go test ./internal/...` — PASS (all packages). Coverage over `./internal/...`: 95.7% (gate ≥95%).
+- 2026-09-15: `make lint` — 0 issues (wrapped 5 over-length lines per repo style).
+- 2026-09-15: e2e not run — expected red on the 5 cases resolving bundled `build` (`config_precedence` NoSpecsIndex, `plan_flags`, `specs_flags` ×2) and the 2 `[prompt-overrides.build]` cases; Phase 3's rewrite heals the first group, Phase 6's migration the second. This is the documented interim state between phases.
+- 2026-09-15: commit `d1271b2` — `feat(prompt): register build-classic and build-subagents built-in prompts` (4 files, +228/−26).
+
 ---
 
 ## Summary
@@ -202,13 +214,13 @@
 | Phase | Description | Status | Completion |
 |-------|-------------|--------|------------|
 | 1 | `BuildAliasPrompt` config field (flag/env/TOML/overlay) | ✅ Complete | 100% |
-| 2 | Built-in prompt registry + `build-subagents` generator | ❌ Not started | 0% |
+| 2 | Built-in prompt registry + `build-subagents` generator | ✅ Complete | 100% |
 | 3 | `build` alias rewrite at invocation entry | ❌ Not started | 0% |
 | 4 | `ralph init` unconditional opt-in | ❌ Not started | 0% |
 | 5 | `prompts` CLI alias awareness (list/show/validate) | ❌ Not started | 0% |
 | 6 | Migration, e2e, README/docs | ❌ Not started | 0% |
 
-**Remaining Effort:** Phases 2–6. Largest single item is the `build-subagents` generator + its content-marker tests (Phase 2); highest-blast-radius item is the e2e `[prompt-overrides.build]` migration (Phase 6). `build-classic` content work is already done (exists as `BuildPrompt`). Phase 1's always-emit tag is the only prerequisite Phase 4 needs — it is in place.
+**Remaining Effort:** Phases 3–6. Phase 3 (alias rewrite in `runCommandLogic`) is what restores bare `ralph build` — until it lands, `build` resolves only via a `PromptsDir/build.md` file or the Phase 3 rewrite; `internal/cli` unit tests were migrated accordingly (`d1271b2`).
 
 ---
 
