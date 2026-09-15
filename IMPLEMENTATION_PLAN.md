@@ -1,25 +1,25 @@
-# Implementation Plan (commands/prompt-authoring)
+# Implementation Plan (prompts/build-*)
 
-**Status:** Complete (8/8 phases) — Authoring Helpers, `prompts validate`, Run-Time Warning, `prompts guide`, `skill install`
-**Last Updated:** 2026-09-11
-**Primary Spec:** [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md), [specs/commands/skill.md](specs/commands/skill.md)
+**Status:** Not Started (0/6 phases) — specs complete and consistent; code has none of `build-subagents`, the `build` alias, or `build-classic` name registration. Only the `build-classic` content contract exists today (as the legacy `build` generator).
+**Last Updated:** 2026-09-15
+**Primary Spec(s):** [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md), [specs/prompts/build-classic.md](specs/prompts/build-classic.md), [specs/prompts.md](specs/prompts.md)
 
 ---
 
 ## Quick Reference
 
-| System/Subsystem            | Spec                                                            | Module/Package                        | Artifacts                                                        | Status        |
-|-----------------------------|-----------------------------------------------------------------|---------------------------------------|------------------------------------------------------------------|---------------|
-| Help / run / init / version | [specs/commands/help.md](specs/commands/help.md), [run.md](specs/commands/run.md), [init.md](specs/commands/init.md), [version.md](specs/commands/version.md) | `internal/cli/cmd.go`, `run.go`, `init.go`, `version.go` | —                                                                | ✅ Complete   |
-| `prompts list` / `prompts show` | [specs/commands/prompts.md](specs/commands/prompts.md)      | `internal/cli/prompts.go`             | —                                                                | ✅ Complete   |
-| Prompt resolution chain     | [specs/prompts.md](specs/prompts.md)                            | `internal/prompt/prompts.go`, `frontmatter.go` | —                                                               | ✅ Complete   |
-| Prompt authoring helpers    | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/prompt/prompts.go`, `frontmatter.go` | —                                                               | ✅ Complete   |
-| `prompts guide`             | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | guide fixture (go:embed)                                         | ✅ Complete   |
-| `prompts validate`          | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/prompts.go`      | —                                                                | ✅ Complete   |
-| Run-time missing-signal warning | [specs/commands/prompts-authoring.md](specs/commands/prompts-authoring.md) | `internal/cli/run.go`        | —                                                                | ✅ Complete |
-| `skill install` (distribution) | [specs/commands/skill.md](specs/commands/skill.md)           | `internal/cli/skill.go`               | `internal/cli/skill.md` (embedded; canonical `.agents` path is a symlink ✅) | ✅ Complete |
+| System/Subsystem | Spec | Module/Package | Artifacts | Status |
+|------------------|------|----------------|-----------|--------|
+| `build-classic` built-in (content contract) | [specs/prompts/build-classic.md](specs/prompts/build-classic.md) | `internal/prompt/prompts.go` (`BuildPrompt`) | — | ✅ Content exists as `BuildPrompt`; ❌ `build-classic` name not registered (`bundledPrompt` accepts only `build`/`plan`, `prompts.go:129-145`) |
+| `build-subagents` built-in (batch prompt) | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) | `internal/prompt/prompts.go` (new `BuildSubagentsPrompt`) | — | ❌ Missing (grep: no hits in `internal/`) |
+| `build` alias rewrite at invocation entry | [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md) (Workflows), [specs/prompts.md](specs/prompts.md) | `internal/cli/run.go` (`runCommandLogic` — shared entry of root cmd and `run` subcommand) | — | ❌ Missing (`GetPrompt` has no rewrite step, `prompts.go:22-46`) |
+| `BuildAliasPrompt` config field (flag/env/TOML/overlay) | [specs/configuration.md](specs/configuration.md) (canonical tables), [build-subagents.md](specs/prompts/build-subagents.md) | `internal/config/config.go`, `internal/cli/run.go` (`setupSharedFlags`) | — | ❌ Missing (`Config` struct `config.go:40-59` has no field) |
+| `ralph init` unconditional opt-in | [specs/commands/init.md](specs/commands/init.md) | `internal/cli/init.go` (`buildConfigFromAnswers`), `internal/config/writer.go` | — | ❌ Missing (init writes via `WriteConfig` → whole-struct encode; field tag + value suffices) |
+| `prompts list/show/validate` alias awareness | [specs/commands/prompts.md](specs/commands/prompts.md) | `internal/cli/prompts.go` | — | ❌ Missing (hardcoded `build`/`plan` cases at `prompts.go:177-181, 201-212, 291-303`) |
+| E2E `[prompt-overrides.build]` migration | [specs/config-by-prompt.md](specs/config-by-prompt.md) (keys use resolved name), build-subagents.md Migration notes | `test/e2e/config_by_prompt_test.go`, `test/e2e/config_local_test.go` | — | ❌ Uses `build` key; silently stops applying once alias lands |
+| README / user docs | README.md | `README.md` | — | ❌ Documents pre-alias world (`build`/`plan` only, no alias, no `build-alias-prompt`) |
 
-**Registered Commands** (verified `internal/cli/cmd.go:47-51`): `init`, `run`, `version`, `prompts`, `skill` (+ Cobra `help`/`completion`).
+**Related domains already spec-updated (no spec work needed):** `specs/prompts.md`, `specs/configuration.md`, `specs/commands/init.md`, `specs/commands/prompts.md`, `specs/config-by-prompt.md`, `specs/config-local-overlay.md`, `specs/README.md` — all aligned to the alias model in commits `0c17456`, `2c73cd6`, `6ed845e`.
 
 ---
 
@@ -27,263 +27,193 @@
 
 > TDD throughout per AGENTS.md: failing tests first for every phase. Coverage gate ≥95% (`make quality`). Mutation testing (`make mutation`) only at final stage.
 
-### Phase 4: Prompt Package Authoring Helpers
+### Phase 1: `BuildAliasPrompt` Config Field (flag / env / TOML / overlay)
 
-**Goal:** Shared, testable content checks in `internal/prompt` so both `validate` and the run-time warning use one implementation.
+**Goal:** The alias target is a first-class config value with full precedence support.
 
-**Status:** ✅ Complete
+**Status:** ❌ Not started
 
 **Paths:**
-- `internal/prompt/prompts.go`
-- `internal/prompt/prompts_test.go` / `prompts_internal_test.go`
+- `internal/config/config.go`
+- `internal/cli/run.go` (`setupSharedFlags`, `:308-326`)
+- `internal/config/config_test.go`
 
 **Checklist:**
-- [x] `internal/prompt.HasCompletionSignal(text string) bool` — true if `<COMPLETION_SIGNAL>` or `<promise>COMPLETE</promise>` present (placeholder-aware; substring match on prompt *content*)
-- [x] `Check` type: `Name`, `Status` (`ok|warn|fail`), `Message`
-- [x] `ValidationResult` type: `Path`, `Checks []Check`
-- [x] `internal/prompt.ValidatePromptText(text string) []Check` — frontmatter balance check, description check, completion-signal check
-- [x] Description extraction: extend `internal/cli/prompts.go:extractDescription` (body-line-only, `:137`) into prompt package supporting frontmatter `description:` OR first non-empty non-heading body line; migrate CLI caller
-- [x] Keep `cli.hasCompletionSignal` (`run.go:277`, line-exact agent-output match) untouched — `RunLoop` literal detection must not change (spec constraint)
+- [ ] `Config.BuildAliasPrompt string` with `toml:"build-alias-prompt"` (no `omitempty` — `WriteConfig` must always emit it for init)
+- [ ] Flag `--build-alias-prompt` bound to the field in `setupSharedFlags`
+- [ ] Env `RALPH_BUILD_ALIAS_PROMPT`: extend `envValues` (`:21-31`), `readEnv` (`:181-195`), `applyConfigValues` (`:197+`) — default `build-classic`, empty resolves to default (spec: "empty value resolves to the default")
+- [ ] Local-overlay merge: extend `mergePromptAndLogScalars` (`:334-344`) with `meta.IsDefined("build-alias-prompt")`
+- [ ] Precedence tests: flag > env > base TOML > local overlay > default
 
-**Definition of Done:** failing tests written first; `make test` passes; helpers covered by table-driven tests (both signal forms, mixed, absent).
+**Definition of Done:** failing precedence tests written first; `go test ./internal/config/ ./internal/cli/` passes; `make lint` clean.
 
-**Implementation notes (2026-09-11):**
-
-- `ValidatePromptText` returns all three checks in spec order (`frontmatter`, `description`, `completion-signal`); `resolve` stays a Phase 5 CLI concern.
-- Frontmatter balance reuses the delimiter scan: `ParseFrontMatter` was refactored onto new unexported `splitFrontMatter`/`opensFrontMatter` helpers (no behavior change to existing callers; `FrontMatterSettings` gained `description`).
-- `ExtractDescription` returns `""` on invalid frontmatter YAML; the CLI `extractDescription` keeps the distinct `(invalid frontmatter)` sentinel by checking `ParseFrontMatter` first, so `prompts list` output is unchanged.
-
-**Risks/Dependencies:** None — stdlib only. Do not conflate the new content check with the existing output-line check.
+**Risks/Dependencies:** None — stdlib only. No validation at config load (spec: validated at prompt resolution time, Phase 3).
 
 ---
 
-### Phase 5: `prompts validate <target>` Subcommand
+### Phase 2: Built-in Prompt Registry (`build-classic`, `build-subagents`)
 
-**Goal:** Static validation with per-check report and exit code 1 on any `fail`.
+**Goal:** `bundledPrompt` serves the three spec built-ins; the batch generator exists per the spec outline.
 
-**Status:** ✅ Complete
+**Status:** ❌ Not started
 
 **Paths:**
-- `internal/cli/prompts.go` (new `NewPromptsValidateCommand`, registered next to list/show at `:24-25`)
-- `internal/cli/prompts_test.go`
-- `internal/prompt/prompts.go` (Phase 4 helpers)
+- `internal/prompt/prompts.go` (`bundledPrompt` `:129-145`, new generator)
+- `internal/prompt/prompts_test.go`
 
-- [x] Target resolution: `.md` suffix or path separator → file path (must exist); else resolve as prompt name via same chain as `prompts show` (built-in first, then `PromptsDir` via `findFileUpwards`)
-- [x] Checks in order, all reported (first `fail` does not stop later checks): `resolve`, `frontmatter`, `description`, `completion-signal`
-- [x] `frontmatter`: unbalanced `---` delimiters → `warn`; empty `description:` in frontmatter → `warn`
-- [x] `completion-signal`: neither signal form → `fail` (loop can never complete)
-- [x] Output format: one line per check (`ok|warn|fail  name: message`), then summary (`N failed, M warnings`), path header first
-- [x] Exit codes: 0 if no `fail`, 1 otherwise; unknown target → `prompt "<target>" not found`, exit 1
-- [x] Check messages never include prompt content (spec security constraint)
+**Checklist:**
+- [ ] `BuildSubagentsPrompt(cfg *config.Config) string` — generated text matches the spec Appendix outline exactly: 10-task cap, at-least-one-subagent-per-task rule, orchestrate-only constraint, per-task validate/commit/plan-update, failed-task record-and-continue, stop-after-batch, signal only when ALL tasks complete; `<SpecsDir>`/`<SpecsIndexFile>`/`<ImplementationPlanName>` substitutions shared with `BuildPrompt` (reuse the index-reference computation, do not duplicate)
+- [ ] `bundledPrompt` cases: `build-classic` → `BuildPrompt` + banner naming the resolved built-in; `build-subagents` → `BuildSubagentsPrompt` + banner; `plan` unchanged
+- [ ] `build` removed from built-ins: error message lists `build-classic`, `build-subagents`, `plan` (alias rewrite in Phase 3 is what makes plain `build` work)
+- [ ] `build-classic` output byte-identical to current `BuildPrompt` output (backwards-compat reference, spec verification: "`ralph build-classic` output equals the former `build` prompt text")
+- [ ] Table tests: `build-subagents` contains every spec-mandated marker; `build-classic` markers per build-classic.md verifications
 
-**Implementation notes (2026-09-11):**
+**Definition of Done:** failing tests first; `go test ./internal/prompt/` passes; `make lint` clean.
 
-- Target resolution lives in `resolveValidationTarget`: `.md` suffix or `/`/`\` separator → file path; else built-in (`build`/`plan`, rendered with the same functions as `prompts show`), else `PromptsDir/<name>.md` via `findFileUpwards`. Display path = the resolved file path, or the bare name for built-ins.
-- An unknown *name* returns `prompt "<target>" not found` (parity with `prompts show`); an unreadable *file path* is reported as a `resolve` check failure instead, so the report header still prints.
-- Exit code is carried by exported `cli.ErrValidationFailed`; `cmd/ralph/main.go` skips the `Error:` line for it (report is already on stdout) but still exits 1. Warnings never fail.
-- Summary line always printed, warning count pluralized (`0 failed, 1 warning`, `N failed, M warnings`).
-
-**Risks/Dependencies:** Depends on Phase 4. Named-prompt resolution should reuse `prompts show` resolution, not duplicate it.
-
-**Reference pattern:** `internal/cli/prompts.go` `NewPromptsShowCommand` (`:48`) for subcommand shape and resolution chain.
+**Risks/Dependencies:** None — string generation only. Banner text change for `build` (`USING DEFAULT 'BUILD' PROMPT`) is superseded by named banners; e2e `run_command_test.go` asserts `[build]` loop banner (RunLoop prompt name), not this banner — verify no e2e assertion pins the old banner text.
 
 ---
 
-### Phase 6: `prompts guide` Subcommand
+### Phase 3: `build` Alias Rewrite at Invocation Entry
 
-**Status:** ✅ Complete
+**Goal:** `build` rewrites to `BuildAliasPrompt` before resolution, in every entry point, exactly once.
 
-**Goal:** Print the embedded authoring contract (static text, stdout, exit 0).
-
-**Paths:**
-- `internal/cli/prompts.go` (new `NewPromptsGuideCommand`)
-- `internal/cli/guide.md` (fixture, `go:embed` — spec default)
-- `internal/cli/prompts_test.go`
-
-- [x] Guide fixture covering all spec-mandated content: file location (`PromptsDir`, default `$HOME/.ralph`, `<name>.md`, invoked as `ralph run <name>` / `ralph <name>`), frontmatter `description` convention, completion signal contract (placeholder + literal), recommended structure (objective → study inputs → single-task steps → validation → stop condition), `scope` argument behavior (not substituted — stated explicitly)
-- [x] Distribution line pointing at `ralph skill install [dir]` (default `.agents/skills`)
-- [x] `go:embed` the fixture; print to stdout, no banners, pipe-friendly
-- [x] Register subcommand; appears in `ralph prompts --help`
-- [x] Open question resolved per spec default: fixture file, not inline string
-
-**Implementation notes (2026-09-11):**
-
-- Fixture is `internal/cli/guide.md`, embedded via `_ "embed"` + `//go:embed guide.md` into `guideText`; `NewPromptsGuideCommand` writes it to `cmd.OutOrStdout()` verbatim. No config load, no disk access.
-- Toolchain note (go1.26.1): a *named* `"embed"` import is reported unused when the only usage is a `//go:embed` on a `string` var — use `_ "embed"` (matches the embed package doc's string example). Verified against a minimal repro.
-**Definition of Done:** `ralph prompts guide` prints contract, exit 0; test asserts content markers (each spec-required topic present).
-
-**Risks/Dependencies:** Distribution line references Phase 8's command — both shipped together in commit `a37ede3`.
-
----
-
-### Phase 7: Run-Time Missing-Signal Warning
-
-**Status:** ✅ Complete
-
-**Goal:** Warn once on stderr when an executed prompt file cannot ever complete the loop.
+**Status:** ❌ Not started
 
 **Paths:**
-- `internal/cli/run.go` (hook after `prompt.GetPrompt` at `:77-80`)
+- `internal/cli/run.go` (`runCommandLogic` `:40-94` — the single shared entry for bare `ralph`, `ralph build`, `ralph run build`; spec architecture calls this "cmd.go invocation entry" but both Cobra entrypoints converge here)
 - `internal/cli/run_test.go`
 
 **Checklist:**
-- [x] After resolution, if source was a prompt file (`cfg.PromptFile` explicit or `PromptsDir/<name>.md`) and text lacks both signal forms → stderr: `warning: prompt file has no completion signal (<COMPLETION_SIGNAL>); the loop will only stop at max iterations`
-- [x] Inline prompts (`--prompt`) and stdin exempt
-- [x] Built-ins not special-cased (they contain the signal; check is a natural no-op)
-- [x] Warning printed exactly once, before loop start; run proceeds normally
+- [ ] Rewrite after `cfg.LoadConfig()` (`:54`), before `prompt.GetPrompt` (`:77`): if `promptName == "build"` and `cfg.BuildAliasPrompt != "build"`, set `promptName = cfg.BuildAliasPrompt`
+- [ ] Downstream layers observe only the rewritten name: `prompt-overrides` lookup (`applyEffectiveSettings` `:90`), loop banners, `RunLoop` prompt name — no further plumbing needed, verify via tests
+- [ ] Self-alias escape hatch: `build-alias-prompt = "build"` skips rewrite; with `PromptsDir/build.md` present the file is used (pre-alias behavior); without it, resolution fails (`build` is not a built-in)
+- [ ] Unknown target `build-alias-prompt = "nope"` fails with the existing prompt-not-found error before loop start; `ralph plan` unaffected
+- [ ] Empty/absent value resolves to `build-classic` (Phase 1 default)
+- [ ] Inline/stdin/explicit `--prompt-file` sources are unchanged by the rewrite (rewrite only affects name-based resolution steps)
 
-**Definition of Done:** spec verification 7 reproduced as failing test first (signal-less `prompts/review.md` → warning on stderr, run continues); inline/stdin/built-in cases assert no warning.
+**Definition of Done:** failing tests first (default alias, opt-in target, escape hatch with and without file, unknown target error, `plan` unaffected); `make lint` clean.
 
-**Implementation notes (2026-09-11):**
-
-- No provenance plumbing needed: `prompt.GetPrompt` returns a non-nil `*config.PromptConfigOverride` exactly for the two file-sourced branches (`explicitPromptFile`, `promptFromDir`); inline, stdin, and bundled return nil. `runCommandLogic` uses `fmOverride != nil` as the file-source condition (commented at the call site), so the exemption matrix falls out of the existing resolution chain.
-- Warning goes to `cmd.ErrOrStderr()` only (not the log-file multiwriter); check runs once per invocation, before `RunLoop`.
-- `cli.hasCompletionSignal` (line-exact agent-output check) untouched; content check reuses `prompt.HasCompletionSignal`.
-
-**Risks/Dependencies:** None — Phase 4 helpers only.
+**Risks/Dependencies:** Depends on Phases 1–2. Exactly one rewrite — no double application on re-entry paths.
 
 ---
 
-### Phase 8: `ralph skill install [dir]` (Related Domain: skill.md)
+### Phase 4: `ralph init` Unconditional Opt-In
 
-**Status:** ✅ Complete (commit `a37ede3`)
+**Goal:** Every generated config targets `build-subagents`; key never asked, never omitted, overwritten on re-init.
 
-**Goal:** Distribute the embedded prompt-authoring skill so agents discover these conventions — the guide's distribution pointer and the workflow's discoverability story.
+**Status:** ❌ Not started
 
 **Paths:**
-- `internal/cli/skill.go` (new)
-- `internal/cli/skill.md` (embedded skill source; renamed from `.agents/skills/specralph-prompts/SKILL.md`)
-- `.agents/skills/specralph-prompts/SKILL.md` (relative symlink → `../../../internal/cli/skill.md`, keeps the canonical agent-discovery path working)
-- `internal/cli/cmd.go` (registers `skill` command)
+- `internal/cli/init.go` (`buildConfigFromAnswers` — called by `writeInitConfig` `:373-378`)
+- `internal/cli/init_test.go`
 
 **Checklist:**
-- [x] Build-time embed of the skill content into the binary (plain `//go:embed skill.md` in the package — no Makefile changes needed)
-- [x] `skill install [dir]`: default `.agents/skills`; target `<dir>/specralph-prompts/SKILL.md`; dirs created `0755`, file written `0644`
-- [x] Existing target without `--force` → error `skill already exists at <target> (use --force to overwrite)`, original untouched
-- [x] `--force` overwrites; no backup
-- [x] Success message to stdout: `Installed specralph-prompts skill to <target>`; exit 0
-- [x] Config-independent (does not load `ralph.toml`; tested with a broken `ralph.toml` present)
-- [x] Installed file passes `skill-creator` `quick_validate.py` (frontmatter valid, name `specralph-prompts`, description without angle brackets)
+- [ ] `buildConfigFromAnswers` sets `BuildAliasPrompt: "build-subagents"` unconditionally (not in `InitAnswers` — spec: "not part of `InitAnswers`"; not a questionnaire question)
+- [ ] Generated TOML contains `build-alias-prompt = "build-subagents"` (whole-struct encode via `config.WriteConfig`/toml encoder — covered by Phase 1 field tag)
+- [ ] Re-init overwrite path replaces any previous `build-alias-prompt` value (regeneration always writes the constant)
+- [ ] Preview lines unchanged (spec mandates the TOML key, not a preview line)
+- [ ] Test: generated config loads through existing config resolution and `ralph build` resolves to `build-subagents` (unit-level: `WriteConfig` output contains the key)
 
-**Implementation notes (2026-09-11):**
+**Definition of Done:** failing tests first; `go test ./internal/cli/` passes.
 
-- Embed mechanism: `go:embed` cannot read dot-directories, so the skill source was moved into the embedding package (`internal/cli/skill.md`) and the canonical `.agents/.../SKILL.md` path became a relative symlink (git mode 120000). Single source of truth, zero build steps; `TestEmbeddedSkillMatchesCanonicalSource` fails if the embed and the `.agents` path ever diverge.
-- Write failure removes a partially written target (`os.Remove` after `WriteFile` error) per the spec's "no partial file left behind".
-- README updated in the same commit: command table rows for `prompts guide`, `prompts validate`, `skill install`, plus a `### ralph skill` section.
-
-**Definition of Done:** all 6 skill.md verifications pass; tests cover happy path, custom dir, collision without/with `--force`.
-
-**Risks/Dependencies:** Symlink checkouts on symlink-unsupported filesystems (e.g. Windows without developer mode) would break the `.agents` path but not the binary or tests of the embedded content; the build is unaffected.
+**Risks/Dependencies:** Depends on Phase 1 (field + tag). Note: existing `ralph.toml` files written before this change lack the key — that is the intended default (`build-classic`), not a migration case.
 
 ---
 
+### Phase 5: `prompts` CLI Alias Awareness (list / show / validate)
+
+**Goal:** The prompts surface matches `specs/commands/prompts.md`: three built-ins, an Aliases section, and `build` following the alias.
+
+**Status:** ❌ Not started
+
+**Paths:**
+- `internal/cli/prompts.go` (`runPromptsList` `:201-229`, `runPromptsShow` `:291-326`, `resolveValidationTarget` `:163-193`)
+- `internal/cli/prompts_test.go`
+
+**Checklist:**
+- [ ] `prompts list` built-ins: `build-classic` (single-task description), `build-subagents` (batch description per spec sample), `plan` — replacing the hardcoded two-line block; `Aliases:` section with `build -> <target> (configurable via build-alias-prompt)`
+- [ ] `prompts show build` prints the target prompt content (rewrites via the same rule; `prompts show build-classic` / `build-subagents` print their built-ins)
+- [ ] `resolveValidationTarget` built-in set extended to the three names, alias-aware for `build` (so `prompts validate build-subagents` reports all checks ok per spec verification)
+- [ ] List description text matches spec sample (`build-classic`: "Implement a single task…"; `build-subagents`: "Pick up to 10 tasks… at least one subagent per task")
+- [ ] Existing `prompts_test.go` assertions updated: list contains the three built-ins + alias line; show-build still yields "Agent Instructions (Build Mode)" via alias→classic
+
+**Definition of Done:** failing tests first; `make lint` clean; manual `./bin/ralph prompts list` / `show build` / `validate build-subagents` match spec sample outputs.
+
+**Risks/Dependencies:** Depends on Phases 2–3 (shared alias-rewrite helper reused here — single implementation of the rewrite rule, not a duplicate).
+
+---
+
+### Phase 6: Migration, E2E, Docs
+
+**Goal:** External surfaces consistent with the alias model; suite green under `make quality`.
+
+**Status:** ❌ Not started
+
+**Paths:**
+- `test/e2e/config_by_prompt_test.go`, `test/e2e/config_local_test.go` (`[prompt-overrides.build]` → `[prompt-overrides.build-classic]`)
+- `test/e2e/COVERAGE_MATRIX.md` (routing rows)
+- `README.md` (feature bullets `:37`, built-in prompts `:245`, completion-signal section `:407`, quickstart `:440`)
+- New e2e coverage for alias behavior
+
+**Checklist:**
+- [ ] Migrate `[prompt-overrides.build]` e2e keys to `build-classic` (spec migration note: overrides keyed by resolved name); alternatively cover the escape hatch (`build-alias-prompt = "build"`) in one case to pin legacy-key behavior
+- [ ] New e2e: default `ralph build` == `build-classic` output; `build-alias-prompt = "build-subagents"` in TOML → batch prompt emitted; unknown alias target fails before agent execution
+- [ ] E2E init coverage: generated TOML contains `build-alias-prompt = "build-subagents"` (init is TTY-gated; use existing non-TTY init test pattern for the config-write portion)
+- [ ] README: built-in prompts are `build-classic`/`build-subagents`/`plan`, `build` alias + `build-alias-prompt` documented, `prompts list` sample updated
+- [ ] `make quality` full gate (lint, gosec, arch, coverage ≥95%); `make test` (unit + e2e)
+- [ ] `make mutation ARGS="internal/prompt internal/cli"` at final stage only
+
+**Definition of Done:** `make quality` and `make test` pass; spec verifications from build-subagents.md "Verifications" section each executed manually and recorded in the log below.
+
+**Risks/Dependencies:** Depends on all prior phases. E2E harness builds the real binary — alias behavior is exercised end-to-end.
+
+---
 
 ## Verification Log
 
-### 2026-06-19: Help and Prompt Discovery (from prior plan cycle)
+### 2026-09-15: Scope Study for prompts/build-*
 
-- 2026-06-19: `./bin/ralph --help`, `ralph help prompts`, `ralph prompts list` - help wiring and `prompts list` verified functional.
-- 2026-06-19: `ralph prompts show build` - recorded as gap in prior plan (Phase 3).
-- (closed later) `feat: add prompts show subcommand` commit `255a808` - `prompts show` implemented; prior plan never updated to reflect this.
-
-### 2026-09-11: Scope Study for prompt-authoring
-
-- 2026-09-11: `git log --oneline -- specs/` - confirmed `1a7512f docs(specs): add prompt authoring and skill install specs` added `specs/commands/prompts-authoring.md`, `specs/commands/skill.md`, `.agents/skills/specralph-prompts/SKILL.md`, plus cross-links into `specs/README.md` and `specs/commands/prompts.md`. Both new specs are `Status: Proposed`.
-- 2026-09-11: read `internal/cli/prompts.go` - only `list` + `show` subcommands registered (`:24-25`); no `guide`, no `validate`.
-
-- 2026-09-11: grep `internal/` for `HasCompletionSignal|COMPLETION_SIGNAL` - `cli.HasCompletionSignal` exists only as literal agent-output check wrapper (`run.go:336-339` over `:277`); no placeholder-aware prompt-content check; no `ValidatePromptText`; no run-time warning anywhere.
-- 2026-09-11: read `internal/prompt/prompts.go` - resolution chain verified: `customPrompt` (inline) → `stdinPrompt` → `explicitPromptFile` (`cfg.PromptFile`) → `promptFromDir` (`PromptsDir/<name>.md`, `findFileUpwards`) → `bundledPrompt`; `ParseFrontMatter` exists in `internal/prompt/frontmatter.go`.
-- 2026-09-11: read `internal/cli/cmd.go:46-51` - registered commands: `init`, `run`, `version`, `prompts`; no `skill` command; `internal/cli/skill.go` absent (glob confirmed).
-- 2026-09-11: read `internal/cli/prompts.go:137-164` - `extractDescription` is body-line-only (no frontmatter `description:` support), lives in CLI layer → Phase 4 migration needed.
-- 2026-09-11: read `IMPLEMENTATION_PLAN.md` (prior) - stale: scoped to `commands/help`, dated 2026-06-19, contradicts code on `prompts show` → regenerated for current scope.
-
-### 2026-09-11: Phase 4 - Prompt Package Authoring Helpers
-
-- 2026-09-11: TDD RED - `go test ./internal/prompt/` - failed on undefined `prompt.HasCompletionSignal` / `ExtractDescription` / `Check` / `ValidatePromptText` (expected missing-feature failure).
-- 2026-09-11: `go test ./internal/prompt/ ./internal/cli/` - all pass after implementation; legacy frontmatter tests unchanged.
-- 2026-09-11: `make lint` - 0 issues (fixed funlen/lll/mnd/nlreturn in new code: table hoisted to package var, long messages wrapped, capacity hint dropped).
-- 2026-09-11: `make test-coverage` - total 95.8% (gate ≥95%); `internal/prompt` at 97.0%, all new helpers at 100%. The only failing package is `cmd/ralph` — pre-existing `TestSkillsLockPointsToExternalRepos` (verified failing on clean tree via `git stash`).
-- 2026-09-11: `make test-race` - no data races in `internal/...` (same pre-existing `cmd/ralph` failure, unrelated).
-- 2026-09-11: `make security` - 0 issues; `make arch` - no warnings.
-- 2026-09-11: `make build` + `RALPH_PROMPTS_DIR=... ralph prompts list` / `prompts show review` - custom prompt with frontmatter `description` shows the frontmatter description in `list` and frontmatter-stripped body in `show` (CLI migration verified end-to-end).
-- 2026-09-11: Fixed pre-existing commit blocker: commit `8458895` removed the `create-readme` skill (only `github/awesome-copilot` entry) without updating `TestSkillsLockPointsToExternalRepos`; the stale expectation failed the pre-commit gate on every commit. Fixed in commit `d19cb4f`.
-
-### 2026-09-11: Phase 5 - `prompts validate <target>`
-
-- 2026-09-11: TDD RED - `go test ./internal/cli/ -run TestPromptsValidate` - failed on undefined `cli.NewPromptsValidateCommand` / `cli.ErrValidationFailed` (expected missing-feature failure).
-- 2026-09-11: `go test ./internal/... ./cmd/...` - all pass after implementation (7 new validate tests: built-in, file target all-ok, named custom, signal-less fail + content-not-leaked, unbalanced frontmatter warn, missing file target resolve-fail, unknown name error).
-- 2026-09-11: `make lint` - 0 issues (fixed dupword in fixture strings, nlreturn in `resolveValidationTarget`).
-- 2026-09-11: `make quality` - full gate passed: gosec 0 issues, go-arch-lint no warnings, coverage total 95.9% (gate ≥95%); `runPromptsValidate` 100%, `resolveValidationTarget` 92.3% (in line with file baseline).
-- 2026-09-11: `./bin/ralph prompts validate build` - all checks ok, exit 0 (spec verification 2).
-- 2026-09-11: `./bin/ralph prompts validate /tmp/ok.md` (placeholder signal + description) - all checks ok, exit 0 (verification 3).
-- 2026-09-11: `./bin/ralph prompts validate /tmp/nosignal.md` - `completion-signal` fail, `1 failed, 0 warnings`, exit 1 (verification 4).
-- 2026-09-11: `./bin/ralph prompts validate /tmp/unbalanced.md` - `frontmatter` warn, `0 failed, 1 warning`, exit 0 (verification 5).
-- 2026-09-11: `./bin/ralph prompts validate nonexistent` - `Error: prompt "nonexistent" not found`, exit 1 (verification 6).
-- 2026-09-11: `./bin/ralph prompts validate /tmp/missing.md` - `resolve` fail, exit 1; content checks not run (plan DoD "missing target").
-- 2026-09-11: `./bin/ralph prompts --help` - `validate` listed alongside `list`/`show`.
-
-### 2026-09-11: Phase 7 - Run-Time Missing-Signal Warning
-
-- 2026-09-11: TDD RED - `go test ./internal/cli/ -run TestRunMissingSignalWarning` - both file-sourced cases failed (no warning emitted); inline/stdin/built-in cases passed (expected missing-feature failure on warn paths only).
-- 2026-09-11: `go test ./internal/cli/ -run TestRunMissingSignalWarning` - all 5 cases pass after implementation (dir-resolved file warns exactly once, `--prompt-file` warns, inline/stdin/built-in silent; DEBUG-mode run proceeds normally in every case).
-- 2026-09-11: `make lint` - 0 issues (extracted `assertRunWarningCase` helper for cyclop, wrapped const for lll).
-- 2026-09-11: `make quality` - full gate passed: gosec 0 issues, go-arch-lint no warnings, coverage gate ≥95%.
-- 2026-09-11: `make build` + `ralph run review` with signal-less `$HOME/.ralph/review.md` (DEBUG=1) - warning on stderr exactly once, run proceeds, exit 0 (spec verification 7).
-- 2026-09-11: `ralph run build` and `ralph run --prompt "Just do it."` - no warning on stderr, exit 0 (exemptions verified end-to-end).
-
-### 2026-09-11: Test Baseline
-
-- 2026-09-11: baseline unchanged — no source modified in this planning pass; `make quality` to be run as gate for Phase 4 TDD start.
-
-### 2026-09-11: Phases 6+8 - `prompts guide` and `ralph skill install`
-
-- 2026-09-11: TDD RED - `go test ./internal/cli/ -run 'TestPromptsGuide|TestSkillInstall|TestEmbeddedSkill|TestSkillHelp'` - failed on undefined `cli.NewPromptsGuideCommand` / `cli.NewSkillCommand` (expected missing-feature failure).
-- 2026-09-11: skill source relocated - `git mv .agents/skills/specralph-prompts/SKILL.md internal/cli/skill.md` + relative symlink back (git mode 120000) - canonical `.agents` path preserved; embed works without build steps.
-- 2026-09-11: `go test ./internal/cli/ -run 'TestPromptsGuide|TestSkillInstall|TestEmbeddedSkill|TestSkillHelp'` - all 8 new tests pass (guide markers + registration; install default dir, custom dir, collision, force, embed-vs-canonical parity, help listing).
-- 2026-09-11: `make lint` - 0 issues (shortened Long strings, local `dirPerm`/`filePerm` consts matching `writer.go` convention, moved nosec comment, wrapped long assertion).
-- 2026-09-11: `go test ./...` - all packages pass, including `test/e2e`.
-- 2026-09-11: `make test-race` - no data races. `make coverage` - total 95.8% (gate ≥95%). `make security` - gosec 0 issues. `make arch` - no warnings.
-- 2026-09-11: `make mutation ARGS="internal/cli"` - Killed 63, Lived 0, Timed out 143, test efficacy 100.00%, mutator coverage 95.45%.
-- 2026-09-11: `./bin/ralph prompts guide` - prints the 52-line authoring contract to stdout, exit 0 (spec verification 1).
-- 2026-09-11: `./bin/ralph prompts --help` - `guide` listed alongside `list`/`show`/`validate`; `./bin/ralph skill --help` - `install` listed (skill.md verification 6).
-- 2026-09-11: `./bin/ralph skill install` (in /tmp/skilltest) - `Installed specralph-prompts skill to .agents/skills/specralph-prompts/SKILL.md`, exit 0, file created (skill.md verification 1).
-- 2026-09-11: `./bin/ralph skill install /tmp/skilltest/custom` - installs to custom dir, exit 0 (verification 2).
-- 2026-09-11: second `./bin/ralph skill install` - `Error: skill already exists at .agents/skills/specralph-prompts/SKILL.md (use --force to overwrite)`, exit 1, original content untouched (verification 3).
-- 2026-09-11: `./bin/ralph skill install --force` - exit 0, content replaced with embedded version (verification 4).
-- 2026-09-11: `python3 .agents/skills/skill-creator/scripts/quick_validate.py <installed skill dir>` - "Skill is valid!", exit 0, for both default-dir and custom-dir installs (verification 5).
-
+- 2026-09-15: `git log --oneline -- specs/` — spec-side alias work landed in `0c17456` (build-subagents prompt, build alias, init opt-in specs + cross-spec updates), `2c73cd6` (content contracts), `6ed845e` (moved into `specs/prompts/`). All code-side work outstanding.
+- 2026-09-15: read `specs/prompts/build-subagents.md`, `specs/prompts/build-classic.md`, `specs/prompts.md` — resolution chain step 1 is the alias rewrite; built-ins are `build-classic`/`build-subagents`/`plan`; `build-subagents.md` Status: Proposed, `build-classic.md` Status: Implemented (content contract only).
+- 2026-09-15: read `internal/prompt/prompts.go` — `GetPrompt` (`:22-46`) has no rewrite step; `bundledPrompt` (`:129-145`) accepts only `build`/`plan` and errors with "(build, plan)"; `BuildPrompt` (`:168-212`) output verified line-by-line against build-classic.md Appendix — identical (content contract satisfied under the old name; `INDEX_REFERENCE` computed at `:169-177`).
+- 2026-09-15: grep `internal/` for `BuildAliasPrompt|build-alias-prompt|build-subagents|build-classic|BuiltInPrompts` — zero source hits; only test files reference `build`.
+- 2026-09-15: read `internal/cli/cmd.go`, `internal/cli/run.go` — root cmd and `run` subcommand both route into `runCommandLogic` (`run.go:40`); `parsePositionalArgs` defaults promptName to `build` (`:295`); `setupSharedFlags` (`:308-326`) has no alias flag; `applyEffectiveSettings` (`:90`) keys prompt-overrides by promptName (rewritten name flows through automatically).
+- 2026-09-15: read `internal/cli/prompts.go` — `runPromptsList` (`:201-229`) hardcodes two built-ins (`build`, `plan`), no Aliases section; `runPromptsShow` (`:291-303`) hardcoded built-in switch, no alias; `resolveValidationTarget` built-in cases at `:177-181`, no alias.
+- 2026-09-15: read `internal/config/config.go`, `internal/config/writer.go` — `Config` (`:40-59`) lacks the field; `readEnv`/`applyConfigValues`/`mergePromptAndLogScalars` all need the new key; `WriteConfig` (`writer.go:13`) encodes the whole struct, so the TOML tag alone makes init output complete once the value is set.
+- 2026-09-15: read `internal/cli/init.go` — `writeInitConfig` (`:373`) → `buildConfigFromAnswers` → `config.WriteConfig`; `InitAnswers` (`:166-173`) has no alias field (spec says it must not); questionnaire keys (`:58-71`) contain none.
+- 2026-09-15: grep `test/e2e` — `config_by_prompt_test.go:51`, `config_local_test.go:85-88` use `[prompt-overrides.build]`; `run_command_test.go:15` asserts loop banner `[build]` (RunLoop name, not the bundled banner — survives alias rewrite only until Phase 6 review; keep an eye on it). `COVERAGE_MATRIX.md` documents `build` routing.
+- 2026-09-15: read `IMPLEMENTATION_PLAN.md` (prior) — scoped to `commands/prompt-authoring`, 8/8 complete, dated 2026-09-11; correct for its scope but wrong scope for `prompts/build-*` → regenerated.
+- 2026-09-15: grep `README.md` — documents pre-alias built-ins (`build` and `plan`) at `:37`, `:245`, `:407`; no alias/`build-alias-prompt` mention anywhere.
+- 2026-09-15: baseline untouched — no source modified in this planning pass; `make quality` to be run as gate for Phase 1 TDD start.
 
 ---
 
 ## Summary
 
-| Phase | Description                                  | Status      | Completion |
-|-------|----------------------------------------------|-------------|------------|
-| 1     | Help Command Verification                    | ✅ Complete | 100%       |
-| 2     | Prompts Command - List Subcommand            | ✅ Complete | 100%       |
-| 3     | Prompts Command - Show Subcommand            | ✅ Complete | 100%       |
-| 4     | Prompt Package Authoring Helpers             | ✅ Complete | 100%       |
-| 5     | `prompts validate <target>`                  | ✅ Complete | 100%       |
-| 6     | `prompts guide`                              | ✅ Complete | 100%       |
-| 7     | Run-Time Missing-Signal Warning              | ✅ Complete | 100%       |
-| 8     | `ralph skill install` (skill.md)             | ✅ Complete | 100%       |
+| Phase | Description | Status | Completion |
+|-------|-------------|--------|------------|
+| 1 | `BuildAliasPrompt` config field (flag/env/TOML/overlay) | ❌ Not started | 0% |
+| 2 | Built-in prompt registry + `build-subagents` generator | ❌ Not started | 0% |
+| 3 | `build` alias rewrite at invocation entry | ❌ Not started | 0% |
+| 4 | `ralph init` unconditional opt-in | ❌ Not started | 0% |
+| 5 | `prompts` CLI alias awareness (list/show/validate) | ❌ Not started | 0% |
+| 6 | Migration, e2e, README/docs | ❌ Not started | 0% |
 
-**Remaining Effort:** None — all 8 phases complete (commit `a37ede3` closes Phases 6+8). Mutation testing run on `internal/cli` (efficacy 100%, 0 lived).
+**Remaining Effort:** All 6 phases. Largest single item is the `build-subagents` generator + its content-marker tests (Phase 2); highest-blast-radius item is the e2e `[prompt-overrides.build]` migration (Phase 6). `build-classic` content work is already done (exists as `BuildPrompt`).
 
 ---
 
 ## Known Existing Work
 
-- `prompts list` / `prompts show` fully implemented in `internal/cli/prompts.go` (commits `255a808`, lint fix `097de17`); registered in `cmd.go:50`. Frontmatter stripped on show.
-- `internal/prompt` authoring helpers (Phase 4, commit `15ca16a`): `HasCompletionSignal` (placeholder-aware content substring), `ValidatePromptText` (returns `[]Check` in order frontmatter/description/completion-signal), `ExtractDescription` (frontmatter `description:` first, else first non-empty non-heading body line; `""` on invalid frontmatter YAML), `Check`/`ValidationResult` types, `StatusOK/Warn/Fail` constants. `cli.hasCompletionSignal` (`run.go:277`) untouched.
-- `prompts validate <target>` fully implemented in `internal/cli/prompts.go` (commit `0dfaf6a`): `NewPromptsValidateCommand` + `runPromptsValidate` + `resolveValidationTarget`; exported `cli.ErrValidationFailed` carried to `cmd/ralph/main.go` for exit-1-without-error-line. Unknown names error like `prompts show`; unreadable file paths report a `resolve` check failure.
-- `internal/prompt.FrontMatterSettings` gained `Description`; delimiter scan refactored into `splitFrontMatter`/`opensFrontMatter` (unexported) — `ParseFrontMatter` behavior unchanged.
-- `internal/prompt.Prompt` resolution chain (`GetPrompt`): inline → stdin → explicit file → `PromptsDir` file (upwards search via `findFileUpwards`) → bundled build/plan. Banner written for file-sourced prompts.
-- `internal/prompt.ParseFrontMatter` (`frontmatter.go`) parses `model`/`agentMode` overrides — reusable for the `frontmatter`/`description` checks.
-- `cli.hasCompletionSignal` (`run.go:277`): literal, line-exact check of *agent output* inside `RunLoop` — protected by spec; do not repurpose for content checking.
-- `.agents/skills/specralph-prompts/SKILL.md` is now a relative symlink to `internal/cli/skill.md` (the embedded source, commit `a37ede3`); `ralph skill install [dir]` distributes it (`internal/cli/skill.go`), `prompts guide` prints the embedded `internal/cli/guide.md` contract. README documents all three commands.
-- Run-time missing-signal warning implemented in `internal/cli/run.go` (commit `c66eeaa`): `fmOverride != nil` used as the file-source provenance signal (non-nil exactly for `explicitPromptFile`/`promptFromDir`); warning to stderr once, before `RunLoop`.
-- Cobra command registration pattern established in `cmd.go` (`NewPromptsCommand` composition, `cmd.AddCommand`).
+- `internal/prompt.BuildPrompt` (`prompts.go:168-212`) already produces the exact `build-classic` content contract (verified against spec Appendix, including the awkward `Manual Deployment Tasks` wrapping at `:203-204`). Phase 2 must not touch its output.
+- `GetPrompt` resolution chain (`prompts.go:22-46`): inline → stdin → explicit file → `PromptsDir` file (`findFileUpwards`) → bundled. The alias rewrite slots in before this chain at the CLI entry; the chain itself needs no change.
+- `applyEffectiveSettings` (`run.go:90`) keys `[prompt-overrides.*]` by promptName — after the rewrite, resolved-name keys apply with zero extra plumbing.
+- Run-time missing-signal warning (`run.go:84-87`) and `prompt.HasCompletionSignal` operate on resolved text — unaffected by the alias.
+- `prompts list/show/validate` infrastructure (`internal/cli/prompts.go`) is complete from the prior plan cycle; Phase 5 only extends the built-in set and adds alias resolution.
+- `config.WriteConfig` (atomic temp-file + rename, `writer.go:13`) encodes the full struct — Phase 4 needs only a field tag plus the constant value in `buildConfigFromAnswers`.
+- E2E harness (`test/e2e/harness_test.go`) builds the real binary and a stub agent (`complete_once` mode) — adequate for alias behavior verification without new infrastructure.
+- Cobra command registration pattern established in `cmd.go` (`:47-51`); no new commands required.
 
 ## Manual Deployment Tasks
 
