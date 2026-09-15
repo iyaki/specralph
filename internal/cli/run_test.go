@@ -363,3 +363,160 @@ func TestHasCompletionSignal(t *testing.T) {
 		})
 	}
 }
+
+var buildAliasRewriteCases = []struct {
+	name        string
+	configTOML  string
+	promptsFile string
+	args        []string
+	wantOut     []string
+	wantNoOut   []string
+	wantErr     string
+}{
+	{
+		name: "default alias resolves to build-classic",
+		args: []string{"build"},
+		wantOut: []string{
+			"USING DEFAULT 'BUILD-CLASSIC' PROMPT",
+			"[build-classic] Iteration 1",
+			"Agent Instructions (Build Mode)",
+		},
+	},
+	{
+		name:       "config target build-subagents emits batch prompt",
+		configTOML: "build-alias-prompt = \"build-subagents\"\n",
+		args:       []string{"build"},
+		wantOut: []string{
+			"USING DEFAULT 'BUILD-SUBAGENTS' PROMPT",
+			"[build-subagents] Iteration 1",
+			"Agent Instructions (Build Mode with Subagents)",
+			"at least one subagent per selected task",
+		},
+	},
+	{
+		name:       "flag overrides config alias target",
+		configTOML: "build-alias-prompt = \"build-subagents\"\n",
+		args:       []string{"--build-alias-prompt", "build-classic", "build"},
+		wantOut: []string{
+			"USING DEFAULT 'BUILD-CLASSIC' PROMPT",
+			"[build-classic] Iteration 1",
+		},
+	},
+	{
+		name:        "escape hatch with prompts dir file keeps pre-alias behavior",
+		configTOML:  "build-alias-prompt = \"build\"\n",
+		promptsFile: "build.md",
+		args:        []string{"build"},
+		wantOut: []string{
+			"USING PROMPT FILE",
+			"[build] Iteration 1",
+		},
+	},
+	{
+		name:       "escape hatch without prompts dir file fails resolution",
+		configTOML: "build-alias-prompt = \"build\"\n",
+		args:       []string{"build"},
+		wantErr:    "prompt file not found for 'build'",
+	},
+	{
+		name:       "unknown alias target fails before loop start",
+		configTOML: "build-alias-prompt = \"nope\"\n",
+		args:       []string{"build"},
+		wantErr:    "prompt file not found for 'nope'",
+		wantNoOut:  []string{"Starting Specralph"},
+	},
+	{
+		name:       "plan invocation is unaffected by alias config",
+		configTOML: "build-alias-prompt = \"nope\"\n",
+		args:       []string{"plan"},
+		wantOut: []string{
+			"USING DEFAULT 'PLAN' PROMPT",
+			"[plan] Iteration 1",
+		},
+	},
+}
+
+func TestRunBuildAliasRewrite(t *testing.T) {
+	for _, tt := range buildAliasRewriteCases {
+		t.Run(tt.name, func(t *testing.T) {
+			output, err := executeRunCommand(t, tt.args, tt.configTOML, tt.promptsFile)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got success with output:\n%s", tt.wantErr, output)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("expected error containing %q, got: %v", tt.wantErr, err)
+				}
+			} else if err != nil {
+				t.Fatalf("expected execute success, got: %v", err)
+			}
+
+			for _, want := range tt.wantOut {
+				if !strings.Contains(output, want) {
+					t.Errorf("expected output to contain %q, got:\n%s", want, output)
+				}
+			}
+			for _, forbidden := range tt.wantNoOut {
+				if strings.Contains(output, forbidden) {
+					t.Errorf("expected output NOT to contain %q, got:\n%s", forbidden, output)
+				}
+			}
+		})
+	}
+}
+
+// executeRunCommand runs `ralph <args>` in an isolated temp cwd with an empty
+// HOME, an optional ralph.toml body, and an optional prompt file written to
+// the default prompts dir ($HOME/.ralph/<name>). DEBUG mode keeps the loop to
+// one iteration that echoes the resolved prompt; combined stdout/stderr is
+// returned alongside the execute error.
+func executeRunCommand(t *testing.T, args []string, configTOML, promptsFileName string) (string, error) {
+	t.Helper()
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	tmp := t.TempDir()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(wd)
+	})
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("DEBUG", "1")
+
+	binDir := t.TempDir()
+	writeExecutable(t, binDir, "opencode", "#!/bin/sh\necho \"ok\"\n")
+	t.Setenv("PATH", binDir)
+
+	if configTOML != "" {
+		if err := os.WriteFile(filepath.Join(tmp, "ralph.toml"), []byte(configTOML), 0o644); err != nil {
+			t.Fatalf("failed to write config file: %v", err)
+		}
+	}
+	if promptsFileName != "" {
+		promptsDir := filepath.Join(home, ".ralph")
+		if err := os.MkdirAll(promptsDir, 0o755); err != nil {
+			t.Fatalf("failed to create prompts dir: %v", err)
+		}
+		content := "# Prompt from file\nReply with <COMPLETION_SIGNAL> when done.\n"
+		if err := os.WriteFile(filepath.Join(promptsDir, promptsFileName), []byte(content), 0o644); err != nil {
+			t.Fatalf("failed to write prompt file: %v", err)
+		}
+	}
+
+	cmd := cli.NewRunCommand()
+	cmd.SetArgs(args)
+
+	var out, errOut bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&errOut)
+
+	err = cmd.Execute()
+
+	return out.String() + errOut.String(), err
+}

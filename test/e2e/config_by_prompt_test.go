@@ -48,7 +48,7 @@ func TestE2EConfigByPromptOverrideFromConfigApplies(t *testing.T) {
 			"ralph.toml": `model = "global-model"
 agent-mode = "global-mode"
 
-[prompt-overrides.build]
+[prompt-overrides.build-classic]
 model = "override-model"
 agent-mode = "override-mode"`,
 		},

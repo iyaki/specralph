@@ -85,7 +85,7 @@ func TestConfigPrecedence_CLIOverridesAll(t *testing.T) {
 	configContent := `
 model = "global-model"
 agent-mode = "global-mode"
-[prompt-overrides.build]
+[prompt-overrides.build-classic]
 model = "override-model"
 agent-mode = "override-mode"
 `
@@ -140,7 +140,7 @@ func TestConfigPrecedence_ConfigOverrideOverridesGlobal(t *testing.T) {
 	configContent := `
 model = "global-model"
 agent-mode = "global-mode"
-[prompt-overrides.build]
+[prompt-overrides.build-classic]
 model = "override-model"
 agent-mode = "override-mode"
 `
@@ -159,7 +159,7 @@ func TestConfigPrecedence_AgentEnvOverridesDoNotAffectModelOrAgentModePrecedence
 model = "global-model"
 agent-mode = "global-mode"
 
-[prompt-overrides.build]
+[prompt-overrides.build-classic]
 model = "config-override-model"
 agent-mode = "config-override-mode"
 
