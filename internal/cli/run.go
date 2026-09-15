@@ -314,6 +314,8 @@ func setupSharedFlags(cmd *cobra.Command, cfg *config.Config) {
 	flags.StringVarP(&cfg.SpecsIndexFile, "specs-index", "i", "", "Specs index file (default: README.md)")
 	flags.BoolVar(&cfg.NoSpecsIndex, "no-specs-index", false, "Disable specs index file")
 	flags.StringVarP(&cfg.ImplementationPlanName, "implementation-plan-name", "n", "", "Implementation plan file name")
+	flags.StringVar(&cfg.BuildAliasPrompt, "build-alias-prompt", "", "Prompt name the build alias resolves to"+
+		" (default: build-classic)")
 	flags.StringVarP(&cfg.LogFile, "log-file", "l", "", "Log file path")
 	flags.BoolVar(&cfg.LogTruncate, "log-truncate", false, "Truncate log file before writing")
 	flags.StringVar(&cfg.CustomPrompt, "prompt", "", "Inline custom prompt (overrides prompt files)"+

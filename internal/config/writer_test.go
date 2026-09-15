@@ -242,3 +242,30 @@ func TestWriteConfig_CannotCreateTempFile(t *testing.T) {
 		t.Fatal("expected error when temp file creation fails")
 	}
 }
+func TestWriteConfigAlwaysEmitsBuildAliasPrompt(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	setPath := filepath.Join(tmpDir, "set.toml")
+	if err := config.WriteConfig(setPath, &config.Config{BuildAliasPrompt: "build-subagents"}); err != nil {
+		t.Fatalf("WriteConfig failed: %v", err)
+	}
+	setContent, err := os.ReadFile(setPath)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if !strings.Contains(string(setContent), `build-alias-prompt = "build-subagents"`) {
+		t.Errorf("expected build-alias-prompt value in output, got:\n%s", setContent)
+	}
+
+	emptyPath := filepath.Join(tmpDir, "empty.toml")
+	if err := config.WriteConfig(emptyPath, &config.Config{}); err != nil {
+		t.Fatalf("WriteConfig failed: %v", err)
+	}
+	emptyContent, err := os.ReadFile(emptyPath)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if !strings.Contains(string(emptyContent), "build-alias-prompt") {
+		t.Errorf("expected build-alias-prompt key always emitted, got:\n%s", emptyContent)
+	}
+}

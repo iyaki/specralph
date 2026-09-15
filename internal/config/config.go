@@ -16,6 +16,7 @@ const (
 	defaultSpecsIndexFile         = "README.md"
 	defaultImplementationPlanName = "IMPLEMENTATION_PLAN.md"
 	defaultAgentName              = "opencode"
+	defaultBuildAliasPrompt       = "build-classic"
 )
 
 type envValues struct {
@@ -27,6 +28,7 @@ type envValues struct {
 	logFile                string
 	logAppend              string
 	promptsDir             string
+	buildAliasPrompt       string
 	agentName              string
 	model                  string
 	agentMode              string
@@ -49,6 +51,7 @@ type Config struct {
 	LogTruncate            bool                            `toml:"log-truncate,omitempty"`
 	CustomPrompt           string                          `toml:"custom-prompt,omitempty"`
 	PromptsDir             string                          `toml:"prompts-dir"`
+	BuildAliasPrompt       string                          `toml:"build-alias-prompt"`
 	AgentName              string                          `toml:"agent"`
 	Model                  string                          `toml:"model,omitempty"`
 	AgentMode              string                          `toml:"agent-mode,omitempty"`
@@ -188,6 +191,7 @@ func readEnv() envValues {
 		logFile:                os.Getenv("RALPH_LOG_FILE"),
 		logAppend:              os.Getenv("RALPH_LOG_APPEND"),
 		promptsDir:             os.Getenv("RALPH_PROMPTS_DIR"),
+		buildAliasPrompt:       os.Getenv("RALPH_BUILD_ALIAS_PROMPT"),
 		agentName:              os.Getenv("RALPH_AGENT"),
 		model:                  os.Getenv("RALPH_MODEL"),
 		agentMode:              os.Getenv("RALPH_AGENT_MODE"),
@@ -208,6 +212,12 @@ func (c *Config) applyConfigValues(fileCfg *Config, env envValues) {
 	)
 	c.CustomPrompt = resolveString(c.CustomPrompt, env.customPrompt, fileCfg.CustomPrompt, "")
 	c.PromptsDir = resolveString(c.PromptsDir, env.promptsDir, fileCfg.PromptsDir, defaultPromptsDir())
+	c.BuildAliasPrompt = resolveString(
+		c.BuildAliasPrompt,
+		env.buildAliasPrompt,
+		fileCfg.BuildAliasPrompt,
+		defaultBuildAliasPrompt,
+	)
 	c.LogFile = resolveString(c.LogFile, env.logFile, fileCfg.LogFile, defaultLogFile())
 	c.LogTruncate = resolveLogTruncate(c.LogTruncate, env.logAppend, fileCfg.LogTruncate)
 	c.AgentName = resolveString(c.AgentName, env.agentName, fileCfg.AgentName, defaultAgentName)
@@ -340,6 +350,9 @@ func mergePromptAndLogScalars(base *Config, overlay *Config, meta toml.MetaData)
 	}
 	if meta.IsDefined("prompts-dir") {
 		base.PromptsDir = overlay.PromptsDir
+	}
+	if meta.IsDefined("build-alias-prompt") {
+		base.BuildAliasPrompt = overlay.BuildAliasPrompt
 	}
 }
 
