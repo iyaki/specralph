@@ -202,7 +202,7 @@ The tag is case-sensitive and must appear exactly as shown. Ralph will stop afte
 
 ### Built-in prompt behavior (summary)
 
-- `build-classic` (legacy single-task build prompt):
+- `build-classic` (legacy single-task build prompt) — full content contract in [built-in-prompts.md](built-in-prompts.md):
   - Instructs to study specs and the implementation plan.
   - Requires implementing a single task, validating, updating plan, and committing.
   - Injects the completion signal `<promise>COMPLETE</promise>` automatically. See [Completion Signal](#completion-signal) for details on custom prompts.
@@ -212,10 +212,12 @@ The tag is case-sensitive and must appear exactly as shown. Ralph will stop afte
   - Selects up to 10 pending tasks and dispatches at least one subagent per task; validates, commits, and updates the plan per task.
   - Emits the completion signal only when all plan tasks are complete. See [build-subagents.md](build-subagents.md).
 
-- Plan prompt:
+- Plan prompt — full content contract in [built-in-prompts.md](built-in-prompts.md):
   - Instructs to generate/update the implementation plan in a structured format.
   - Requires study/gap analysis against specs and code.
   - Injects the completion signal `<promise>COMPLETE</promise>` automatically. See [Completion Signal](#completion-signal) for details on custom prompts.
+
+Full instruction contracts for the built-in prompts live in [built-in-prompts.md](built-in-prompts.md).
 
 ## Related Specifications
 
