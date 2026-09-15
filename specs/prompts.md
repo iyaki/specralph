@@ -62,7 +62,7 @@ internal/
 2. If not inline, it checks stdin usage.
 3. If not stdin, it checks explicit prompt file path.
 4. If not explicit, it searches for a prompt file in the prompts directory (walking upward).
-5. If not found, it falls back to built-in prompts for `build-classic`, `build-subagents`, and `plan` (the `build` alias rewrites the name first; see [build-subagents.md](build-subagents.md)).
+5. If not found, it falls back to built-in prompts for `build-classic`, `build-subagents`, and `plan` (the `build` alias rewrites the name first; see [prompts/build-subagents.md](prompts/build-subagents.md)).
 6. If no source is valid, it returns an error.
 
 Note: prompt resolution behavior is independent of command routing. Routing and collision rules are defined in [commands/run.md](commands/run.md).
@@ -168,7 +168,7 @@ Note: prompt resolution behavior is independent of command routing. Routing and 
 - `ralph plan` uses built-in plan prompt when no file exists.
 - `ralph run plan` uses built-in plan prompt when no file exists.
 - `ralph init` executes init subcommand, while `ralph run init` resolves prompt `init`.
-- `ralph build` resolves through the `build` alias to `build-classic` by default; `ralph init`-generated configs target `build-subagents` (see [build-subagents.md](build-subagents.md)).
+- `ralph build` resolves through the `build` alias to `build-classic` by default; `ralph init`-generated configs target `build-subagents` (see [prompts/build-subagents.md](prompts/build-subagents.md)).
 
 ## Completion Signal
 
@@ -202,7 +202,7 @@ The tag is case-sensitive and must appear exactly as shown. Ralph will stop afte
 
 ### Built-in prompt behavior (summary)
 
-- `build-classic` (legacy single-task build prompt) — full content contract in [built-in-prompts.md](built-in-prompts.md):
+- `build-classic` (legacy single-task build prompt) — full content contract in [prompts/build-classic.md](prompts/build-classic.md):
   - Instructs to study specs and the implementation plan.
   - Requires implementing a single task, validating, updating plan, and committing.
   - Injects the completion signal `<promise>COMPLETE</promise>` automatically. See [Completion Signal](#completion-signal) for details on custom prompts.
@@ -210,18 +210,18 @@ The tag is case-sensitive and must appear exactly as shown. Ralph will stop afte
 - `build-subagents` (opt-in via `build-alias-prompt`, written by `ralph init`):
   - Uses the same study instructions as `build-classic`.
   - Selects up to 10 pending tasks and dispatches at least one subagent per task; validates, commits, and updates the plan per task.
-  - Emits the completion signal only when all plan tasks are complete. See [build-subagents.md](build-subagents.md).
+  - Emits the completion signal only when all plan tasks are complete. See [prompts/build-subagents.md](prompts/build-subagents.md).
 
-- Plan prompt — full content contract in [built-in-prompts.md](built-in-prompts.md):
+- Plan prompt — full content contract in [prompts/plan.md](prompts/plan.md):
   - Instructs to generate/update the implementation plan in a structured format.
   - Requires study/gap analysis against specs and code.
   - Injects the completion signal `<promise>COMPLETE</promise>` automatically. See [Completion Signal](#completion-signal) for details on custom prompts.
 
-Full instruction contracts for the built-in prompts live in [built-in-prompts.md](built-in-prompts.md).
+Full instruction contracts for the built-in prompts live in [prompts/build-classic.md](prompts/build-classic.md), [prompts/build-subagents.md](prompts/build-subagents.md), and [prompts/plan.md](prompts/plan.md).
 
 ## Related Specifications
 
-- [build-subagents.md](build-subagents.md) — Build prompt with subagents, the `build` alias, and the `build-alias-prompt` config field.
+- [prompts/build-subagents.md](prompts/build-subagents.md) — Build prompt with subagents, the `build` alias, and the `build-alias-prompt` config field.
 - [commands/prompts.md](commands/prompts.md) — CLI `prompts` command for listing and viewing prompts. Use `ralph prompts list` to discover available prompts and `ralph prompts show <name>` to inspect full prompt content.
 - [commands/run.md](commands/run.md) — Using prompts with the `run` command.
 - [configuration.md](configuration.md) — Configuration fields used in prompt resolution.

@@ -24,13 +24,13 @@ Status: Proposed
 - Making Ralph spawn or manage subagents itself; subagents are dispatched by the underlying agent CLI within a single loop iteration.
 - Introducing a generic alias map or additional aliases (future work).
 - Making the batch size (10) configurable (future work).
-- Changing prompt source precedence for non-`build` names (see [prompts.md](prompts.md)).
-- Changing command routing (see [commands/run.md](commands/run.md)).
+- Changing prompt source precedence for non-`build` names (see [prompts.md](../prompts.md)).
+- Changing command routing (see [commands/run.md](../commands/run.md)).
 
 ### Scope
 
 - In scope: the `build-subagents` and `build-classic` built-in prompts, the `build` alias rewrite, the `BuildAliasPrompt` config field, the `ralph init` always-written key, and built-in prompt listing.
-- Out of scope: agent adapters, per-prompt model/mode override mechanics (see [config-by-prompt.md](config-by-prompt.md)), loop execution internals.
+- Out of scope: agent adapters, per-prompt model/mode override mechanics (see [config-by-prompt.md](../config-by-prompt.md)), loop execution internals.
 
 ## Architecture
 
@@ -161,7 +161,7 @@ internal/
 
 ### Field reference
 
-`BuildAliasPrompt` — flag `--build-alias-prompt`, env `RALPH_BUILD_ALIAS_PROMPT`, TOML key `build-alias-prompt`, default `build-classic` — is owned by [configuration.md](configuration.md), which holds the canonical source tables and precedence.
+`BuildAliasPrompt` — flag `--build-alias-prompt`, env `RALPH_BUILD_ALIAS_PROMPT`, TOML key `build-alias-prompt`, default `build-classic` — is owned by [configuration.md](../configuration.md), which holds the canonical source tables and precedence.
 
 - The target is validated at prompt resolution time, not at config load: an unknown name produces the prompt-not-found error.
 - The value is a prompt name (built-in or `PromptsDir` file name), not a file path.
@@ -177,7 +177,7 @@ internal/
 
 ## Security Considerations
 
-- Prompt content remains sensitive (see [prompts.md](prompts.md)); subagent briefs may quote plan text, so treat agent output and logs as sensitive.
+- Prompt content remains sensitive (see [prompts.md](../prompts.md)); subagent briefs may quote plan text, so treat agent output and logs as sensitive.
 - No new external surface is introduced.
 
 ## Dependencies
@@ -247,9 +247,11 @@ internal/
 
 ## Related Specifications
 
-- [prompts.md](prompts.md) — resolution precedence, completion signal, built-in prompt summaries.
-- [configuration.md](configuration.md) — `BuildAliasPrompt` field and precedence.
-- [commands/prompts.md](commands/prompts.md) — listing/showing/validating prompts and the alias line.
-- [commands/run.md](commands/run.md) — routing (`ralph` → `run build`).
-- [config-by-prompt.md](config-by-prompt.md) — per-prompt overrides keyed by resolved prompt name.
-- [commands/init.md](commands/init.md) — `ralph init` writes `build-alias-prompt = "build-subagents"` unconditionally.
+- [prompts.md](../prompts.md) — resolution precedence, completion signal, built-in prompt summaries.
+- [build-classic.md](build-classic.md) — legacy single-task prompt content contract.
+- [plan.md](plan.md) — plan prompt content contract.
+- [configuration.md](../configuration.md) — `BuildAliasPrompt` field and precedence.
+- [commands/prompts.md](../commands/prompts.md) — listing/showing/validating prompts and the alias line.
+- [commands/run.md](../commands/run.md) — routing (`ralph` → `run build`).
+- [config-by-prompt.md](../config-by-prompt.md) — per-prompt overrides keyed by resolved prompt name.
+- [commands/init.md](../commands/init.md) — `ralph init` writes `build-alias-prompt = "build-subagents"` unconditionally.

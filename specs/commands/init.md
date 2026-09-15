@@ -158,7 +158,7 @@ specs/
 ## Configuration
 
 - `ralph init` writes TOML keys already defined in [specs/configuration.md](configuration.md).
-- `build-alias-prompt` is always written with value `build-subagents`; see [build-subagents.md](../build-subagents.md).
+- `build-alias-prompt` is always written with value `build-subagents`; see [build-subagents.md](../prompts/build-subagents.md).
 - Runtime precedence is unchanged: flags > env vars > config file > defaults.
 
 ### Command interface
