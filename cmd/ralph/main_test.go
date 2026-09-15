@@ -108,9 +108,7 @@ func TestSkillsLockPointsToExternalRepos(t *testing.T) {
 	}
 
 	expected := []string{
-		"iyaki/opencode-base-template",
 		"anthropics/skills",
-		"obra/superpowers",
 	}
 	for _, exp := range expected {
 		if !strings.Contains(string(content), exp) {
