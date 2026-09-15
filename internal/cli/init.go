@@ -844,6 +844,7 @@ func buildConfigFromAnswers(answers *InitAnswers) *config.Config {
 		PromptsDir:             answers.PromptsDir,
 		LogFile:                answers.LogFile,
 		LogTruncate:            answers.LogTruncate,
+		BuildAliasPrompt:       "build-subagents",
 	}
 }
 
