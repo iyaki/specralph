@@ -1,6 +1,6 @@
 # Implementation Plan (prompts/build-*)
 
-**Status:** In Progress (5/6 phases) — Phase 1 (`93cb6af`): `BuildAliasPrompt` first-class config value. Phase 2 (`d1271b2`): `build-classic`/`build-subagents` registered, `build` removed from built-ins. Phase 3 (`256ff02`): `build` alias rewrite at invocation entry. Phase 4 (`c7de4b9`): `ralph init` unconditional opt-in. Phase 5 (`2906aa4`): `prompts` CLI alias-aware. Phase 6 remains.
+**Status:** Complete (6/6 phases) — Phase 6 (`0880bef`): alias e2e coverage, coverage matrix, README, mutation gate fix. Phases 1–5: `93cb6af`, `d1271b2`, `256ff02`, `c7de4b9`, `2906aa4`.
 **Last Updated:** 2026-09-15
 **Primary Spec(s):** [specs/prompts/build-subagents.md](specs/prompts/build-subagents.md), [specs/prompts/build-classic.md](specs/prompts/build-classic.md), [specs/prompts.md](specs/prompts.md)
 
@@ -16,8 +16,8 @@
 | `BuildAliasPrompt` config field (flag/env/TOML/overlay) | [specs/configuration.md](specs/configuration.md) (canonical tables), [build-subagents.md](specs/prompts/build-subagents.md) | `internal/config/config.go`, `internal/cli/run.go` (`setupSharedFlags`) | — | ✅ Done (`93cb6af`: field `toml:"build-alias-prompt"` no omitempty, `--build-alias-prompt` flag, `RALPH_BUILD_ALIAS_PROMPT`, overlay merge, default `build-classic`) |
 | `ralph init` unconditional opt-in | [specs/commands/init.md](specs/commands/init.md) | `internal/cli/init.go` (`buildConfigFromAnswers`), `internal/config/writer.go` | — | ✅ Done (`c7de4b9`: constant value in `buildConfigFromAnswers`; Phase 1 tag makes `WriteConfig` always emit the key; overwrite regeneration replaces prior value) |
 | `prompts list/show/validate` alias awareness | [specs/commands/prompts.md](specs/commands/prompts.md) | `internal/cli/prompts.go` | — | ✅ Done (`2906aa4`: three built-ins + `Aliases:` section in list; show/validate resolve via the shared `rewriteBuildAlias`; `validate build-subagents` reports all checks ok) |
-| E2E `[prompt-overrides.build]` migration | [specs/config-by-prompt.md](specs/config-by-prompt.md) (keys use resolved name), build-subagents.md Migration notes | `test/e2e/config_by_prompt_test.go`, `test/e2e/config_local_test.go` | — | ⚠️ Partial (keys migrated to `build-classic` in `256ff02` — required by the per-commit coverage gate; escape-hatch case + new alias e2e coverage remain in Phase 6) |
-| README / user docs | README.md | `README.md` | — | ❌ Documents pre-alias world (`build`/`plan` only, no alias, no `build-alias-prompt`) |
+| E2E `[prompt-overrides.build]` migration + alias e2e coverage | [specs/config-by-prompt.md](specs/config-by-prompt.md) (keys use resolved name), build-subagents.md Migration notes | `test/e2e/config_by_prompt_test.go`, `test/e2e/config_local_test.go`, `test/e2e/build_alias_test.go` | — | ✅ Done (keys migrated in `256ff02`; Phase 6 added `build_alias_test.go`: default alias, TOML target, unknown target fail-fast, plan unaffected, escape hatch) |
+| README / user docs | README.md | `README.md` | — | ✅ Done (built-ins `build-classic`/`build-subagents`/`plan`, alias + `build-alias-prompt` in bullets, Command Model, init, prompts list, env table, TOML example, Workflow) |
 
 **Related domains already spec-updated (no spec work needed):** `specs/prompts.md`, `specs/configuration.md`, `specs/commands/init.md`, `specs/commands/prompts.md`, `specs/config-by-prompt.md`, `specs/config-local-overlay.md`, `specs/README.md` — all aligned to the alias model in commits `0c17456`, `2c73cd6`, `6ed845e`.
 
@@ -147,7 +147,7 @@
 
 **Goal:** External surfaces consistent with the alias model; suite green under `make quality`.
 
-**Status:** ❌ Not started
+**Status:** ✅ Complete (`0880bef`)
 
 **Paths:**
 - `test/e2e/config_by_prompt_test.go`, `test/e2e/config_local_test.go` (`[prompt-overrides.build]` → `[prompt-overrides.build-classic]`)
@@ -156,12 +156,12 @@
 - New e2e coverage for alias behavior
 
 **Checklist:**
-- [x] Migrate `[prompt-overrides.build]` e2e keys to `build-classic` (spec migration note: overrides keyed by resolved name) — done in `256ff02` (per-commit coverage gate required green e2e); alternatively cover the escape hatch (`build-alias-prompt = "build"`) in one case to pin legacy-key behavior
-- [ ] New e2e: default `ralph build` == `build-classic` output; `build-alias-prompt = "build-subagents"` in TOML → batch prompt emitted; unknown alias target fails before agent execution
-- [ ] E2E init coverage: generated TOML contains `build-alias-prompt = "build-subagents"` (init is TTY-gated; use existing non-TTY init test pattern for the config-write portion)
-- [ ] README: built-in prompts are `build-classic`/`build-subagents`/`plan`, `build` alias + `build-alias-prompt` documented, `prompts list` sample updated
-- [ ] `make quality` full gate (lint, gosec, arch, coverage ≥95%); `make test` (unit + e2e)
-- [ ] `make mutation ARGS="internal/prompt internal/cli"` at final stage only
+- [x] Migrate `[prompt-overrides.build]` e2e keys to `build-classic` (spec migration note: overrides keyed by resolved name) — done in `256ff02` (per-commit coverage gate required green e2e); escape-hatch behavior additionally pinned by `TestE2EBuildAliasEscapeHatchUsesPromptFile`
+- [x] New e2e: default `ralph build` == `build-classic` output; `build-alias-prompt = "build-subagents"` in TOML → batch prompt emitted; unknown alias target fails before agent execution — `test/e2e/build_alias_test.go`
+- [x] E2E init coverage: full-flow init requires a pty harness (TTY-gated on both stdin and stdout in `internal/cli/init.go:19-35`); config-write contract stays covered at unit level (`TestInitCommandWritesBuildAliasPrompt`, `TestInitCommandOverwriteReplacesBuildAliasPrompt`), recorded in COVERAGE_MATRIX "Known Non-E2E Coverage"
+- [x] README: built-in prompts are `build-classic`/`build-subagents`/`plan`, `build` alias + `build-alias-prompt` documented, env var table + TOML example + init section updated
+- [x] `make quality` full gate (lint, gosec, arch, coverage ≥95%); `make test` (unit + e2e)
+- [x] `make mutation` at final stage — per-package (gremlins accepts one path); target fixed to pass `--timeout-coefficient 10` (default coefficient timed out every mutant)
 
 **Definition of Done:** `make quality` and `make test` pass; spec verifications from build-subagents.md "Verifications" section each executed manually and recorded in the log below.
 
@@ -232,6 +232,16 @@
 - 2026-09-15: `make lint` — 0 issues. `make quality` — PASS (coverage gate ≥95%, gosec/govulncheck/go-arch-lint clean). `go test ./test/e2e/ -count=1` — PASS.
 - 2026-09-15: commit `2906aa4` — `feat(cli): make prompts commands build-alias aware` (2 files, +119/−45).
 
+### 2026-09-15: Phase 6 — Migration, E2E, Docs
+
+- 2026-09-15: `go test ./test/e2e/ -run TestE2EBuildAlias -count=1 -v` — 6/6 scenarios PASS (`build_alias_test.go`): bare `build` and explicit `build-classic` both emit the classic banner/header; TOML `build-alias-prompt = "build-subagents"` emits the batch prompt with 10-task-cap + subagent markers and `[build-subagents]` loop banner; unknown target `nope` fails `prompt file not found` before agent start; `plan` ignores the alias target; escape hatch uses `.ralph/prompts/build.md` with `USING PROMPT FILE` banner. Prompt text observed via `DEBUG=1` single-iteration mode (`run.go:258-264`), no agent needed.
+- 2026-09-15: init e2e decision — `executeInitCommand` requires `term.IsTerminal` on both stdin and stdout (`init.go:19-35`); driving the questionnaire e2e needs a pty harness (new dependency, rejected). Config-write contract remains unit-covered (`TestInitCommandWritesBuildAliasPrompt`, `TestInitCommandOverwriteReplacesBuildAliasPrompt`); documented in COVERAGE_MATRIX "Known Non-E2E Coverage".
+- 2026-09-15: `make test` — PASS (unit + e2e, e2e/agents included).
+- 2026-09-15: `make quality` — PASS (golangci-lint 0 issues, gosec 0 issues, go-arch-lint OK, coverage gate ≥95%).
+- 2026-09-15: `make mutation ARGS="internal/prompt"` — Killed 9, Lived 0, efficacy 100%, mutator coverage 100%. `make mutation ARGS="internal/cli"` — Killed 31, Lived 0, efficacy 100%, mutator coverage 91.18%; 3 NOT_COVERED are display-loop control (`internal/cli/prompts.go:253,257`) and the TTY-detection heuristic (`internal/cli/init.go:34`) — cosmetic/defensive, not business logic. Alias rewrite (`run.go:317`) fully killed.
+- 2026-09-15: fixed `test-mutation` target — gremlins default `--timeout-coefficient` timed out every mutant on this machine (0% efficacy noise); target now passes `--timeout-coefficient 10`. Note: gremlins accepts at most one path, so run per package (`ARGS="internal/prompt"`, then `ARGS="internal/cli"`).
+- 2026-09-15: spec verifications from build-subagents.md executed across Phases 3–6: default `ralph`/`ralph build` == `build-classic` (e2e), flag/env/alias-target equivalence (unit, Phase 3), unknown-target fail-fast + plan unaffected (e2e), escape hatch with file (e2e), `prompts list/show/validate` alias-aware (Phase 5 manual runs), `build-subagents` markers (unit Phase 2 + e2e), init writes `build-alias-prompt = "build-subagents"` (unit Phase 4).
+
 ---
 
 ## Summary
@@ -243,9 +253,9 @@
 | 3 | `build` alias rewrite at invocation entry | ✅ Complete | 100% |
 | 4 | `ralph init` unconditional opt-in | ✅ Complete | 100% |
 | 5 | `prompts` CLI alias awareness (list/show/validate) | ✅ Complete | 100% |
-| 6 | Migration, e2e, README/docs | ❌ Not started | 0% |
+| 6 | Migration, e2e, README/docs | ✅ Complete | 100% |
 
-**Remaining Effort:** Phase 6 only (escape-hatch e2e case, new alias e2e coverage, init e2e coverage, README, `make mutation` at final stage).
+**Remaining Effort:** None — all phases complete. Mutation testing done at final stage.
 
 ---
 
