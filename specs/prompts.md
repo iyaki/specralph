@@ -6,13 +6,13 @@ Status: Implemented
 
 ### Purpose
 
-- Define how Ralph resolves prompts and generates default build/plan prompts.
+- Define how Ralph resolves prompts (including the `build` alias) and generates default build/plan prompts.
 - Provide a testable description of prompt precedence and prompt content inputs.
 
 ### Goals
 
 - Specify prompt resolution order and failure behavior.
-- Document the built-in build and plan prompts at a behavioral level.
+- Document the built-in build (`build-classic`, `build-subagents`) and plan prompts at a behavioral level.
 - Describe how prompt files are discovered on disk.
 
 ### Non-Goals
@@ -62,7 +62,7 @@ internal/
 2. If not inline, it checks stdin usage.
 3. If not stdin, it checks explicit prompt file path.
 4. If not explicit, it searches for a prompt file in the prompts directory (walking upward).
-5. If not found, it falls back to built-in prompts for `build` and `plan`.
+5. If not found, it falls back to built-in prompts for `build-classic`, `build-subagents`, and `plan` (the `build` alias rewrites the name first; see [build-subagents.md](build-subagents.md)).
 6. If no source is valid, it returns an error.
 
 Note: prompt resolution behavior is independent of command routing. Routing and collision rules are defined in [commands/run.md](commands/run.md).
@@ -92,12 +92,13 @@ Note: prompt resolution behavior is independent of command routing. Routing and 
 
 ### Resolve prompt (happy path)
 
-1. If `CustomPrompt` is set, return it.
-2. If `PromptFile` is `-` or `promptName` is `-`, read prompt text from stdin.
-3. If `PromptFile` is set, read that file.
-4. If a prompt file exists at `PromptsDir/<promptName>.md` (searching upward), read it.
-5. If `promptName` is `build` or `plan`, generate the built-in prompt.
-6. Otherwise, return an error.
+1. If `promptName` is `build`, rewrite it to the alias target (`BuildAliasPrompt`, default `build-classic`); if the target is `build`, keep it.
+2. If `CustomPrompt` is set, return it.
+3. If `PromptFile` is `-` or `promptName` is `-`, read prompt text from stdin.
+4. If `PromptFile` is set, read that file.
+5. If a prompt file exists at `PromptsDir/<promptName>.md` (searching upward), read it.
+6. If `promptName` is `build-classic`, `build-subagents`, or `plan`, generate the built-in prompt.
+7. Otherwise, return an error.
 
 ### Resolve prompt through explicit run command
 
@@ -167,6 +168,7 @@ Note: prompt resolution behavior is independent of command routing. Routing and 
 - `ralph plan` uses built-in plan prompt when no file exists.
 - `ralph run plan` uses built-in plan prompt when no file exists.
 - `ralph init` executes init subcommand, while `ralph run init` resolves prompt `init`.
+- `ralph build` resolves through the `build` alias to `build-classic` by default; `ralph init`-generated configs target `build-subagents` (see [build-subagents.md](build-subagents.md)).
 
 ## Completion Signal
 
@@ -176,7 +178,7 @@ Ralph detects task completion by searching for the following XML-like tag in age
 <promise>COMPLETE</promise>
 ```
 
-The built-in `build` and `plan` prompts use the placeholder `<COMPLETION_SIGNAL>`, which Ralph automatically replaces with `<promise>COMPLETE</promise>` at runtime before sending the prompt to the agent.
+The built-in `build-classic`, `build-subagents`, and `plan` prompts use the placeholder `<COMPLETION_SIGNAL>`, which Ralph automatically replaces with `<promise>COMPLETE</promise>` at runtime before sending the prompt to the agent.
 
 When creating custom prompts (inline via `--prompt` or in prompt files), you can either:
 
@@ -200,10 +202,15 @@ The tag is case-sensitive and must appear exactly as shown. Ralph will stop afte
 
 ### Built-in prompt behavior (summary)
 
-- Build prompt:
+- `build-classic` (legacy single-task build prompt):
   - Instructs to study specs and the implementation plan.
   - Requires implementing a single task, validating, updating plan, and committing.
   - Injects the completion signal `<promise>COMPLETE</promise>` automatically. See [Completion Signal](#completion-signal) for details on custom prompts.
+
+- `build-subagents` (opt-in via `build-alias-prompt`, written by `ralph init`):
+  - Uses the same study instructions as `build-classic`.
+  - Selects up to 10 pending tasks and dispatches at least one subagent per task; validates, commits, and updates the plan per task.
+  - Emits the completion signal only when all plan tasks are complete. See [build-subagents.md](build-subagents.md).
 
 - Plan prompt:
   - Instructs to generate/update the implementation plan in a structured format.
@@ -212,6 +219,7 @@ The tag is case-sensitive and must appear exactly as shown. Ralph will stop afte
 
 ## Related Specifications
 
+- [build-subagents.md](build-subagents.md) — Build prompt with subagents, the `build` alias, and the `build-alias-prompt` config field.
 - [commands/prompts.md](commands/prompts.md) — CLI `prompts` command for listing and viewing prompts. Use `ralph prompts list` to discover available prompts and `ralph prompts show <name>` to inspect full prompt content.
 - [commands/run.md](commands/run.md) — Using prompts with the `run` command.
 - [configuration.md](configuration.md) — Configuration fields used in prompt resolution.

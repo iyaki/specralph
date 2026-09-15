@@ -94,7 +94,7 @@ internal/
   - `AgentMode` (optional string)
 
 - PromptConfigOverridesMap
-  - Key: prompt name (for example `build`, `plan`, `my-prompt`)
+  - Key: prompt name (for example `build-subagents`, `plan`, `my-prompt`)
   - Value: `PromptConfigOverride`
 
 - EffectiveAgentSettings
@@ -164,7 +164,7 @@ Config files may define a dedicated map-like section named `prompt-overrides`.
 Example (`ralph.toml`):
 
 ```toml
-[prompt-overrides.build]
+[prompt-overrides.build-subagents]
 model = "gpt-5.3-codex"
 agent-mode = "planner"
 
@@ -178,6 +178,8 @@ Notes:
 - Each subsection key is the prompt name used at invocation time.
 - Values in this section apply only when that prompt is selected.
 - This section does not replace existing global `model` and `agent-mode` keys; it complements them.
+
+- Keys refer to the resolved prompt name: the `build` alias resolves to its target before overrides are looked up (see [build-subagents.md](build-subagents.md)).
 
 ### Supported front matter keys
 
@@ -220,8 +222,8 @@ Notes:
 
 - `ralph --prompt-file ./prompts/build.md build` applies `model` and `agent-mode` from front matter when present.
 - `ralph --model my-cli-model --prompt-file ./prompts/build.md build` keeps CLI flag value over front matter.
-- `ralph --config ./ralph.toml build` applies `[prompt-overrides.build]` values when no higher-precedence source is set.
-- `ralph --config ./ralph.toml --prompt-file ./prompts/build.md build` uses front matter over `[prompt-overrides.build]`.
+- `ralph --config ./ralph.toml build` applies `[prompt-overrides.build-subagents]` values when no higher-precedence source is set.
+- `ralph --config ./ralph.toml --prompt-file ./prompts/build.md build` uses front matter over `[prompt-overrides.build-subagents]`.
 - A malformed front matter block returns an error before agent execution.
 - Debug or trace output confirms prompt body sent to agent excludes front matter block.
 
@@ -252,12 +254,12 @@ Expected behavior:
 model = "gpt-4"
 agent-mode = "default"
 
-[prompt-overrides.build]
+[prompt-overrides.build-subagents]
 model = "gpt-5.3-codex"
 agent-mode = "planner"
 ```
 
 Expected behavior:
 
-- Running `ralph build` uses `gpt-5.3-codex` and `planner` unless overridden by flag/env/front matter.
+- Running `ralph build-subagents` — or `ralph build` when the alias targets it (for example in `ralph init`-generated configs) — uses `gpt-5.3-codex` and `planner` unless overridden by flag/env/front matter.
 - Running `ralph plan` falls back to global `model = "gpt-4"` and `agent-mode = "default"` unless it has its own prompt override.

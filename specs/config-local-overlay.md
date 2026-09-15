@@ -84,15 +84,15 @@ Example:
 # base: ralph.toml
 model = "gpt-5"
 
-[prompt-overrides.build]
+[prompt-overrides.build-subagents]
 model = "gpt-5.3-codex"
 
 # local: ralph-local.toml
-[prompt-overrides.build]
+[prompt-overrides.build-subagents]
 agent-mode = "planner"
 ```
 
-Expected merged result for `prompt-overrides.build`:
+Expected merged result for `prompt-overrides.build-subagents`:
 
 - `model = "gpt-5.3-codex"` (from base)
 - `agent-mode = "planner"` (from local)

@@ -70,7 +70,7 @@ internal/
 ### Core Entities
 
 - Config
-  - Fields: `ConfigFile`, `MaxIterations`, `PromptFile`, `SpecsDir`, `SpecsIndexFile`, `NoSpecsIndex`, `ImplementationPlanName`, `LogFile`, `LogTruncate`, `CustomPrompt`, `PromptsDir`, `AgentName`, `Model`, `AgentMode`, `Env`.
+  - Fields: `ConfigFile`, `MaxIterations`, `PromptFile`, `SpecsDir`, `SpecsIndexFile`, `NoSpecsIndex`, `ImplementationPlanName`, `LogFile`, `LogTruncate`, `CustomPrompt`, `PromptsDir`, `BuildAliasPrompt`, `AgentName`, `Model`, `AgentMode`, `Env`.
   - `ConfigFile` is selected by CLI/env (`--config`, `RALPH_CONFIG`) and is not a supported TOML key.
   - Remaining fields may be set by flag, env var, and/or config file key as documented below.
 
@@ -144,6 +144,7 @@ internal/
 | `--log-file`, `-l`                 | `LogFile`                | Log file path                                   |
 | `--log-truncate`                   | `LogTruncate`            | Truncate log file before writing                |
 | `--prompt`                         | `CustomPrompt`           | Inline custom prompt                            |
+| `--build-alias-prompt`             | `BuildAliasPrompt`       | Prompt name the `build` alias resolves to       |
 | `--agent`, `-a`                    | `AgentName`              | Agent name (`opencode`, `claude`, `cursor`)     |
 | `--model`                          | `Model`                  | Model name passed to the agent CLI              |
 | `--agent-mode`                     | `AgentMode`              | Agent mode/sub-agent passed to the agent CLI    |
@@ -162,6 +163,7 @@ internal/
 | `RALPH_LOG_FILE`                 | `LogFile`                | String path                     |
 | `RALPH_LOG_APPEND`               | `LogTruncate`            | `0` truncates (disables append) |
 | `RALPH_PROMPTS_DIR`              | `PromptsDir`             | String path                     |
+| `RALPH_BUILD_ALIAS_PROMPT`       | `BuildAliasPrompt`       | Prompt name for the `build` alias |
 | `RALPH_AGENT`                    | `AgentName`              | Agent name                      |
 | `RALPH_MODEL`                    | `Model`                  | Model name                      |
 | `RALPH_AGENT_MODE`               | `AgentMode`              | Agent mode                      |
@@ -184,6 +186,7 @@ Notes:
 | `log-truncate`             | `LogTruncate`            | `log-truncate = false`                                |
 | `custom-prompt`            | `CustomPrompt`           | `custom-prompt = "..."`                               |
 | `prompts-dir`              | `PromptsDir`             | `prompts-dir = "./prompts"`                           |
+| `build-alias-prompt`       | `BuildAliasPrompt`       | `build-alias-prompt = "build-subagents"`              |
 | `agent`                    | `AgentName`              | `agent = "opencode"`                                  |
 | `model`                    | `Model`                  | `model = "gpt-4"`                                     |
 | `agent-mode`               | `AgentMode`              | `agent-mode = "planner"`                              |
@@ -202,6 +205,7 @@ Notes:
 | `SpecsIndexFile`         | `README.md`                |
 | `ImplementationPlanName` | `IMPLEMENTATION_PLAN.md`   |
 | `PromptsDir`             | `$HOME/.ralph`             |
+| `BuildAliasPrompt`       | `build-classic`            |
 | `LogFile`                | `./ralph.log`              |
 | `AgentName`              | `opencode`                 |
 | `Model`                  | none (optional)            |
@@ -241,6 +245,8 @@ Notes:
 - `ralph` applies the same config precedence as `ralph run build`.
 - `ralph --env FOO=bar build` passes `FOO=bar` to the child agent process.
 - `ralph --config ./ralph.toml --env FOO=flag build` resolves `FOO` as flag value over config `[env]`.
+- `RALPH_BUILD_ALIAS_PROMPT=build-classic ralph build` resolves the `build` alias to `build-classic`.
+- `build-alias-prompt = "build-subagents"` in TOML applies when no flag or env var sets it (see [build-subagents.md](build-subagents.md)).
 - Config files that include `config-file = "..."` fail before agent execution starts.
 
 ## Appendices
