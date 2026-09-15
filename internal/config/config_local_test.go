@@ -19,6 +19,7 @@ func TestLoadConfigWithOverlayScalars(t *testing.T) {
 model = "gpt-4"
 agent = "opencode"
 max-iterations = 10
+build-alias-prompt = "base-classic"
 `
 	if err := os.WriteFile(configFile, []byte(baseContent), 0644); err != nil {
 		t.Fatalf("failed to write base config: %v", err)
@@ -27,6 +28,7 @@ max-iterations = 10
 	overlayContent := `
 model = "claude-3-opus"
 max-iterations = 20
+build-alias-prompt = "overlay-classic"
 `
 	if err := os.WriteFile(overlayFile, []byte(overlayContent), 0644); err != nil {
 		t.Fatalf("failed to write overlay config: %v", err)
@@ -46,6 +48,9 @@ max-iterations = 20
 	}
 	if c.MaxIterations != 20 {
 		t.Errorf("expected max-iterations 20 (from overlay), got %d", c.MaxIterations)
+	}
+	if c.BuildAliasPrompt != "overlay-classic" {
+		t.Errorf("expected build-alias-prompt 'overlay-classic' (from overlay), got %q", c.BuildAliasPrompt)
 	}
 	// base value preserved
 	if c.AgentName != "opencode" {

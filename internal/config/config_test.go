@@ -25,6 +25,7 @@ func clearConfigEnv(t *testing.T) {
 	t.Setenv("RALPH_AGENT", "")
 	t.Setenv("RALPH_MODEL", "")
 	t.Setenv("RALPH_AGENT_MODE", "")
+	t.Setenv("RALPH_BUILD_ALIAS_PROMPT", "")
 }
 
 func TestLoadConfigDefaults(t *testing.T) {
@@ -73,6 +74,9 @@ func assertDefaultCoreFields(t *testing.T, c *config.Config, home string) {
 	}
 	if c.PromptsDir != filepath.Join(home, ".ralph") {
 		t.Fatalf("expected default prompts dir in HOME, got %q", c.PromptsDir)
+	}
+	if c.BuildAliasPrompt != "build-classic" {
+		t.Fatalf("expected default build alias prompt build-classic, got %q", c.BuildAliasPrompt)
 	}
 }
 
@@ -137,6 +141,62 @@ agent-mode = "file-mode"
 	if c.AgentMode != "env-mode" {
 		t.Fatalf("expected env override for agent mode, got %q", c.AgentMode)
 	}
+}
+func TestLoadConfigBuildAliasPromptPrecedence(t *testing.T) {
+	clearConfigEnv(t)
+
+	t.Run("config file value applies", func(t *testing.T) {
+		dir := t.TempDir()
+		configFile := filepath.Join(dir, "ralph.toml")
+		if err := os.WriteFile(configFile, []byte(`build-alias-prompt = "file-target"`), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		c := &config.Config{ConfigFile: configFile}
+		if err := c.LoadConfig(); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if c.BuildAliasPrompt != "file-target" {
+			t.Fatalf("expected build-alias-prompt from config file, got %q", c.BuildAliasPrompt)
+		}
+	})
+
+	t.Run("env var overrides config file", func(t *testing.T) {
+		dir := t.TempDir()
+		configFile := filepath.Join(dir, "ralph.toml")
+		if err := os.WriteFile(configFile, []byte(`build-alias-prompt = "file-target"`), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		t.Setenv("RALPH_BUILD_ALIAS_PROMPT", "env-target")
+		c := &config.Config{ConfigFile: configFile}
+		if err := c.LoadConfig(); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if c.BuildAliasPrompt != "env-target" {
+			t.Fatalf("expected env override for build-alias-prompt, got %q", c.BuildAliasPrompt)
+		}
+	})
+
+	t.Run("flag overrides env and config file", func(t *testing.T) {
+		dir := t.TempDir()
+		configFile := filepath.Join(dir, "ralph.toml")
+		if err := os.WriteFile(configFile, []byte(`build-alias-prompt = "file-target"`), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		t.Setenv("RALPH_BUILD_ALIAS_PROMPT", "env-target")
+		c := &config.Config{ConfigFile: configFile, BuildAliasPrompt: "flag-target"}
+		if err := c.LoadConfig(); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if c.BuildAliasPrompt != "flag-target" {
+			t.Fatalf("expected flag override for build-alias-prompt, got %q", c.BuildAliasPrompt)
+		}
+	})
 }
 
 func TestLoadConfigPromptFileFromConfigFile(t *testing.T) {

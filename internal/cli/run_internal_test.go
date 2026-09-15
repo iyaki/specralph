@@ -292,3 +292,25 @@ func TestApplyAgentModeSettings(t *testing.T) {
 		}
 	})
 }
+func TestSetupSharedFlagsRegistersBuildAliasPrompt(t *testing.T) {
+	t.Run("run command", func(t *testing.T) {
+		cmd := NewRunCommand()
+		if err := cmd.ParseFlags([]string{"--build-alias-prompt", "build-subagents"}); err != nil {
+			t.Fatalf("failed to parse flags: %v", err)
+		}
+		got, err := cmd.Flags().GetString("build-alias-prompt")
+		if err != nil {
+			t.Fatalf("flag not registered: %v", err)
+		}
+		if got != "build-subagents" {
+			t.Fatalf("expected flag value build-subagents, got %q", got)
+		}
+	})
+
+	t.Run("ralph command", func(t *testing.T) {
+		cmd := NewRalphCommand()
+		if cmd.Flags().Lookup("build-alias-prompt") == nil {
+			t.Fatal("expected --build-alias-prompt flag on ralph command")
+		}
+	})
+}
