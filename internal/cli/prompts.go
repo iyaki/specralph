@@ -163,7 +163,7 @@ func runPromptsValidate(output io.Writer, cfg *config.Config, target string) err
 // resolveValidationTarget resolves the validate target to a display path and
 // its content: a file path when the target ends in .md or contains a path
 // separator, otherwise a prompt name (built-in first, then custom files in
-// PromptsDir).
+// PromptsDir). The build alias resolves to its configured target first.
 func resolveValidationTarget(cfg *config.Config, target string) (string, string, error) {
 	isFilePath := strings.HasSuffix(target, ".md") ||
 		strings.Contains(target, "/") ||
@@ -174,9 +174,13 @@ func resolveValidationTarget(cfg *config.Config, target string) (string, string,
 		return target, string(content), err
 	}
 
+	target = rewriteBuildAlias(target, cfg.BuildAliasPrompt)
+
 	switch target {
-	case "build":
+	case "build-classic":
 		return target, prompt.BuildPrompt(cfg), nil
+	case "build-subagents":
+		return target, prompt.BuildSubagentsPrompt(cfg), nil
 	case "plan":
 		return target, prompt.PlanPrompt(cfg, ""), nil
 	}
@@ -204,12 +208,19 @@ func runPromptsList(output io.Writer, cfg *config.Config) error {
 		maxDescLen  = 80
 		maxShortLen = 70
 	)
-	buildDesc := "Implement a task from IMPLEMENTATION_PLAN.md after studying specs, then validate, commit, update plan."
-	planDesc := "Generate/update IMPLEMENTATION_PLAN.md with phase-based plan after studying specs and gaps."
+	buildClassicDesc := "Implement a single task from IMPLEMENTATION_PLAN.md after studying specs, " +
+		"then validate, commit, and update the plan."
+	buildSubagentsDesc := "Pick up to 10 tasks from IMPLEMENTATION_PLAN.md and execute them " +
+		"with at least one subagent per task."
+	planDesc := "Generate or update IMPLEMENTATION_PLAN.md with a phase-based plan after " +
+		"studying specs, existing code, and identifying gaps."
 
 	_, _ = fmt.Fprintln(output, "Built-in Prompts:")
-	_, _ = fmt.Fprintf(output, "  build      %s\n", truncateString(buildDesc, maxDescLen))
-	_, _ = fmt.Fprintf(output, "  plan       %s\n", truncateString(planDesc, maxDescLen))
+	_, _ = fmt.Fprintf(output, "  %-15s %s\n", "build-classic", truncateString(buildClassicDesc, maxDescLen))
+	_, _ = fmt.Fprintf(output, "  %-15s %s\n", "build-subagents", truncateString(buildSubagentsDesc, maxDescLen))
+	_, _ = fmt.Fprintf(output, "  %-15s %s\n", "plan", truncateString(planDesc, maxDescLen))
+
+	_, _ = fmt.Fprintf(output, "\nAliases:\n  build -> %s (configurable via build-alias-prompt)\n", cfg.BuildAliasPrompt)
 
 	// Discover custom prompts
 	customPrompts := discoverCustomPrompts(cfg)
@@ -289,10 +300,18 @@ func truncateString(s string, maxLen int) string {
 }
 
 func runPromptsShow(output io.Writer, cfg *config.Config, promptName string) error {
+	// Resolve the build alias once via the shared rule; the rewritten name then
+	// resolves like any other prompt name.
+	promptName = rewriteBuildAlias(promptName, cfg.BuildAliasPrompt)
+
 	// Try built-in prompts first
 	switch promptName {
-	case "build":
+	case "build-classic":
 		_, _ = fmt.Fprint(output, prompt.BuildPrompt(cfg))
+
+		return nil
+	case "build-subagents":
+		_, _ = fmt.Fprint(output, prompt.BuildSubagentsPrompt(cfg))
 
 		return nil
 	case "plan":
