@@ -8,11 +8,13 @@ Status: Implemented
 
 - Define an interactive `ralph init` command that guides users through initial CLI configuration.
 - Reduce setup friction by generating a valid `ralph.toml` from guided answers instead of manual edits.
+- Opt initialized projects into the `build-subagents` prompt by always writing `build-alias-prompt`.
 
 ### Goals
 
 - Provide a deterministic interactive questionnaire for common Ralph configuration fields.
 - Generate a TOML file compatible with the existing configuration loader and precedence rules.
+- Always include `build-alias-prompt = "build-subagents"` in the generated TOML (not part of the questionnaire).
 - Prevent accidental data loss with explicit overwrite confirmation.
 
 ### Non-Goals
@@ -78,7 +80,7 @@ specs/
 2. Command resolves output path (`./ralph.toml` by default).
 3. Command seeds defaults from an existing target config file (if present) or from configuration defaults.
 4. Command asks ordered interactive questions and validates each answer.
-5. Answers are normalized into config keys compatible with `internal/config`.
+5. Answers are normalized into config keys compatible with `internal/config`; `build-alias-prompt = "build-subagents"` is added unconditionally.
 6. Command renders deterministic TOML and writes it atomically.
 7. Command prints a success summary and suggested next commands.
 
@@ -96,7 +98,7 @@ specs/
 
 - InitAnswers
   - Fields: `AgentName`, `Model`, `AgentMode`, `MaxIterations`, `SpecsDir`, `SpecsIndexFile`, `ImplementationPlanName`, `PromptsDir`, `LogFile`, `LogTruncate`.
-  - Mirrors existing configuration fields in [specs/configuration.md](configuration.md).
+  - Mirrors existing configuration fields in [specs/configuration.md](configuration.md); the unconditional `build-alias-prompt` value is not part of `InitAnswers`.
 
 ### Relationships
 
@@ -118,7 +120,7 @@ specs/
 3. Build question defaults from baseline config defaults.
 4. Ask questions in order, validating input at each step.
 5. Show final preview summary (not raw TOML) and ask for confirmation.
-6. Write TOML to target path and print success message.
+6. Write TOML (always including `build-alias-prompt = "build-subagents"`) to the target path and print success message.
 
 ### `ralph init` (existing file)
 
@@ -126,6 +128,7 @@ specs/
 2. Parse existing values and use them as question defaults when valid.
 3. Prompt for overwrite confirmation unless `--force` is provided.
 4. If user declines overwrite, exit without changing files.
+5. If overwrite proceeds, the regenerated TOML always contains `build-alias-prompt = "build-subagents"`, replacing any previous value for the key.
 
 ### Input validation and retry
 
@@ -155,6 +158,7 @@ specs/
 ## Configuration
 
 - `ralph init` writes TOML keys already defined in [specs/configuration.md](configuration.md).
+- `build-alias-prompt` is always written with value `build-subagents`; see [build-subagents.md](../build-subagents.md).
 - Runtime precedence is unchanged: flags > env vars > config file > defaults.
 
 ### Command interface
@@ -178,11 +182,14 @@ specs/
 | Prompts directory                         | `prompts-dir`              | input   | `.ralph/prompts`         | Non-empty path                  |
 | Log file path (leave empty to disable logging) | `log-file`                 | input   | `` (empty = disabled)    | Non-empty path (optional)       |
 
+The `build-alias-prompt` key is not asked as a question; it is always written with value `build-subagents`.
+
 ### Generated TOML behavior
 
 - Answers are converted into config keys defined in [specs/configuration.md](configuration.md).
 - Writes use atomic temp-file + rename semantics through `internal/config/writer.go`.
 - Optional fields with empty values (model, agent-mode, log-file) are omitted from the generated TOML file.
+- `build-alias-prompt = "build-subagents"` is always present, regardless of answers.
 
 ## Permissions
 
@@ -208,6 +215,7 @@ specs/
 - Should `ralph init` preserve comments and unknown keys when overwriting an existing TOML file?
 - Should a `--minimal` mode exist to ask only agent/model/mode and skip advanced options?
 - Should non-interactive bootstrap mode be added later for CI or automation?
+- Should `ralph init` preserve an existing `build-alias-prompt` value instead of overwriting it with `build-subagents`?
 
 ## Verifications
 
@@ -216,6 +224,7 @@ specs/
 - Running `ralph init` when `ralph.toml` exists prompts for overwrite and leaves file unchanged when declined.
 - Running `ralph init` without a TTY exits non-zero with a clear guidance message.
 - A generated config is loaded successfully by existing config resolution logic.
+- A generated `ralph.toml` always contains `build-alias-prompt = "build-subagents"`, including when overwriting an existing config.
 
 ## Appendices
 ### Example generated config (accept defaults)
@@ -228,4 +237,5 @@ specs-index-file = "README.md"
 implementation-plan-name = "IMPLEMENTATION_PLAN.md"
 prompts-dir = ".ralph/prompts"
 log-truncate = false
+build-alias-prompt = "build-subagents"
 ```

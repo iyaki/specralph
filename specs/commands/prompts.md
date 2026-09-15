@@ -50,7 +50,7 @@ internal/
 ### List available prompts
 
 1. User invokes `ralph prompts list`.
-2. Prompt command scans for built-in prompts (always available: `build`, `plan`).
+2. Prompt command scans for built-in prompts (always available: `build-classic`, `build-subagents`, `plan`).
 3. Command discovers custom prompt files by scanning `PromptsDir` and parent directories for `*.md` files.
 4. Command outputs a list showing:
    - Prompt name
@@ -62,8 +62,9 @@ internal/
 
 1. User invokes `ralph prompts show <name>` where `<name>` is a prompt identifier.
 2. Command resolves the prompt:
-   - If `<name>` matches a built-in prompt (`build` or `plan`), generates the full prompt text.
+   - If `<name>` matches a built-in prompt (`build-classic`, `build-subagents`, or `plan`), generates the full prompt text.
    - If `<name>` matches a custom prompt file, reads and displays file content.
+   - `<name>` `build` follows the `build` alias to its configured target before resolution.
 3. Command outputs prompt content to stdout:
    - For built-in prompts: full generated text.
    - For custom prompts: file content with frontmatter stripped (if present).
@@ -82,10 +83,15 @@ The `prompts list` command outputs prompts in the following format:
 
 ```
 Built-in Prompts:
-  build      Implement a single task from IMPLEMENTATION_PLAN.md after studying specs,
-             then validate, commit, and update the plan.
-  plan       Generate or update IMPLEMENTATION_PLAN.md with a phase-based plan after
-             studying specs, existing code, and identifying gaps.
+  build-classic   Implement a single task from IMPLEMENTATION_PLAN.md after studying
+                  specs, then validate, commit, and update the plan.
+  build-subagents Pick up to 10 tasks from IMPLEMENTATION_PLAN.md and execute them
+                  with at least one subagent per task.
+  plan            Generate or update IMPLEMENTATION_PLAN.md with a phase-based plan
+                  after studying specs, existing code, and identifying gaps.
+
+Aliases:
+  build -> build-classic (configurable via build-alias-prompt)
 
 Custom Prompts:
   review     Code review workflow with security checklist
@@ -100,6 +106,7 @@ Use 'ralph run <prompt-name>' to execute a prompt.
 
 - Built-in prompts always listed first, under "Built-in Prompts:" heading.
 - Custom prompts listed under "Custom Prompts:" heading (omit section if none found).
+- Aliases listed under "Aliases:" heading, one line per alias: `<alias> -> <target>`.
 - Each prompt shows:
   - Name (left-aligned, padded to 10 characters minimum).
   - Description on same line or wrapped to next line with indentation.
@@ -131,8 +138,8 @@ For custom prompt files, the description is extracted using the following preced
 
 ## Verifications
 
-- `ralph prompts list` shows built-in prompts (`build`, `plan`) and any custom prompt files.
-- `ralph prompts show build` outputs the full built-in build prompt content.
+- `ralph prompts list` shows built-in prompts (`build-classic`, `build-subagents`, `plan`) and any custom prompt files.
+- `ralph prompts show build` follows the alias and outputs the target prompt content.
 - `ralph prompts show plan` outputs the full built-in plan prompt content.
 - `ralph prompts show review` outputs the content of `./prompts/review.md` with frontmatter stripped.
 - `ralph prompts show nonexistent` returns error `prompt "nonexistent" not found`.
@@ -148,10 +155,11 @@ For custom prompt files, the description is extracted using the following preced
 The prompts command was implemented with the following features:
 
 ### prompts list
-- Lists built-in prompts (build and plan) with their descriptions
+- Lists built-in prompts (build-classic, build-subagents, plan) with their descriptions
 - Discovers custom prompts by scanning the configured PromptsDir
 - Truncates descriptions to 80 characters for readability
 - Provides usage hint to execute prompts with ralph run prompt-name
+- Renders the build alias line (build -> configured target)
 
 ### prompts show name
 - For built-in prompts: generates and displays the full prompt content
@@ -164,12 +172,17 @@ The prompts command was implemented with the following features:
 # List all available prompts
 $ ralph prompts list
 Built-in Prompts:
-  build      Implement a single task from IMPLEMENTATION_PLAN.md after studying specs...
-  plan       Generate or update IMPLEMENTATION_PLAN.md with a phase-based plan after study...
+  build-classic   Implement a single task from IMPLEMENTATION_PLAN.md after studying specs...
+  build-subagents Pick up to 10 tasks from IMPLEMENTATION_PLAN.md and execute them with
+                  at least one subagent per task...
+  plan            Generate or update IMPLEMENTATION_PLAN.md with a phase-based plan after study...
+
+Aliases:
+  build -> build-classic (configurable via build-alias-prompt)
 
 Use 'ralph run <prompt-name>' to execute a prompt.
 
-# View the build prompt
+# View the prompt behind the build alias
 $ ralph prompts show build
 # Agent Instructions (Build Mode)
 
@@ -188,6 +201,6 @@ $ ralph prompts show plan
 The following verifications confirm the command works as specified:
 
 - ralph prompts list - shows built-in prompts with descriptions (DONE)
-- ralph prompts show build - displays full build prompt content (DONE)
+- ralph prompts show build - displays the alias target prompt content (DONE)
 - ralph prompts show plan - displays full plan prompt content (DONE)
 - Command visible in ralph --help under Available Commands (DONE)
