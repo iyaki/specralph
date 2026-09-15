@@ -3,6 +3,7 @@
 ## Spec-First Workflow
 
 - Read `specs/README.md` before any feature work.
+- Author or update specs with the `spec-creator` skill (`.agents/skills/spec-creator`) when it is available.
 - Assume specs describe intent, not implementation.
 - Verify reality in the codebase before claiming something exists.
 - Implement to spec patterns and data shapes; update specs only when asked.
