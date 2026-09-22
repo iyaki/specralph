@@ -94,20 +94,112 @@ internal/
 
 ### Instruction contract
 
-Structure:
+Verbatim output of `internal/prompt.PlanPrompt(cfg, scope)` with placeholder config values substituted; the only variable input is `<Scope>`, interpolated verbatim (possibly empty) into the `Scope:` line and the plan-title requirement.
 
-1. `# Agent Instructions (Planning Mode)` heading and `Scope: <Scope>` line.
-2. **Objective** — generate or update `<ImplementationPlanName>` in a structured, phase-based format with: clear status metadata, quick reference tables, phase sections with paths and checklists, verification log entries, summary tables and remaining effort. "Plan only. Do NOT implement anything."
-3. **Study and Gap Analysis** — study `<SpecsDir>/*`; study `<ImplementationPlanName>` (if present; it may be incorrect); study relevant source code against specs; use `git` to study recent spec changes for the scope. Rules: do not assume missing — confirm via code search; identify existing work, partial implementations, TODOs, placeholders, skipped/flaky tests, inconsistent patterns; concise but complete, lists and tables over paragraphs; `[x]` only when verified in code, `[ ]` when missing or unverified; regenerate the plan when stale or contradictory; if the scope relates to other domain areas, include them (study their specs and code).
-4. **Output Format Requirements** — the plan must contain:
-   - *Header*: title `Implementation Plan (<Scope>)`; status line `**Status:** <summary>`; last-updated date `YYYY-MM-DD`; reference to primary spec(s).
-   - *Quick Reference*: table mapping systems/subsystems to specs, modules/packages, web packages, migrations/artifacts; `✅` marks implemented items.
-   - *Phased Plan*: numbered phases aligned to the spec's domain; each phase has goal, status (if applicable), paths, `[x]`/`[ ]` checklist, Definition of Done (tests run, commands/URLs, files touched), brief risks/dependencies; subsections (e.g., 9.1) with scope-specific paths; "Reference pattern" links when a canonical directory or file exists.
-   - *Verification Log*: chronological entries with date, what was verified, exact commands or URLs, tests and results, bug fixes, files touched — format `YYYY-MM-DD: <command or URL> - <result>`.
-   - *Summary*: phases table with completion status plus a "Remaining effort" line.
-   - *Known Existing Work*: confirmed existing implementations to prevent duplicate work.
-   - *Manual Deployment Tasks*: required section for manual production steps; exactly `None` when not applicable.
-5. **Stop Condition** — after writing/updating, if `<ImplementationPlanName>` already reflects the current gaps, reply with `<COMPLETION_SIGNAL>`.
+```markdown
+# Agent Instructions (Planning Mode)
+
+Scope: <Scope>
+
+## Objective
+
+Generate or update `<ImplementationPlanName>` in a structured, phase-based format with:
+
+- Clear status metadata
+- Quick reference tables
+- Phase sections with paths and checklists
+- Verification log entries
+- Summary tables and remaining effort
+
+Plan only. Do NOT implement anything.
+
+## Study and Gap Analysis
+
+- Study `<SpecsDir>/*` to learn application requirements.
+- Study `<ImplementationPlanName>` (if present; it may be incorrect).
+- Study relevant source code to compare against specs.
+- Use `git` to study recent changes on the specs related to the specified current scope.
+
+Rules:
+
+- Do NOT assume missing; confirm via code search first.
+- Identify where work already exists, partial implementations, TODOs, placeholders,
+  skipped/flaky tests, or inconsistent patterns.
+- Keep the plan concise but complete; prefer lists and tables over paragraphs.
+- Use `[x]` only when verified in code. Use `[ ]` if missing or unverified.
+- Regenerate the plan if it becomes stale, contradictory,
+  or significantly out of sync with code.
+- If the specified scope has relationships with other domain areas,
+  implementation may be needed in those areas as well
+  (always study the related specs and code). Include this in the plan.
+
+## Output Format Requirements
+
+Write `<ImplementationPlanName>` using this structure and level of detail:
+
+Header
+
+- Title: `Implementation Plan (<Scope>)`
+- Status line: `**Status:** <summary (e.g., "UI Components Complete (39/39)")>`
+- Last Updated date: `YYYY-MM-DD`
+- Reference to primary spec(s)
+
+Quick Reference
+
+- A table mapping systems/subsystems to:
+  - Specs
+  - Modules/packages
+  - Web packages
+  - Migrations or other artifacts
+- Use `✅` to mark items already implemented.
+
+Phased Plan
+
+- Use numbered phases (e.g., Phase 9, Phase 10) aligned to the spec's domain.
+- Each phase includes:
+  - Goal
+  - Status (if applicable)
+  - Paths (directories or file patterns)
+  - Checklist with `[x]` for verified complete and `[ ]` for missing
+  - Definition of Done (tests run, commands/URLs, files touched)
+  - Risks/Dependencies (brief)
+- Break phases into subsections (e.g., 9.1, 9.2)
+  with scope-specific paths and item lists.
+- Include "Reference pattern" links
+  when there's a canonical directory or file to follow.
+
+Verification Log
+
+- A chronological log of verification steps with dates.
+- Each entry includes:
+  - What was verified (endpoints, commands, builds, tests, UI routes)
+  - Exact commands or URLs used
+  - Tests run and results
+  - Bug fixes discovered (if any)
+  - Files touched (if known from code search)
+  - Use format: `YYYY-MM-DD: <command or URL> - <result>`
+
+Summary
+
+- Table of phases with completion status
+  - "Remaining effort" line summarizing unfinished sections
+
+Known Existing Work
+
+- Brief section listing confirmed existing implementations to prevent duplicate work
+
+Manual Deployment Tasks
+
+- Required section to document manual steps needed before or during
+  production deployment (manual configuration, third-party service setup,
+  API key acquisition, etc).
+- If not applicable, write exactly: `None`.
+
+## Stop Condition
+
+**IMPORTANT**: After writing/updating if `<ImplementationPlanName>` already reflects the current gaps, reply with:
+`<COMPLETION_SIGNAL>`
+```
 
 ## Related Specifications
 

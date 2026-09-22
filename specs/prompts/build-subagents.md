@@ -204,7 +204,9 @@ internal/
 
 ## Appendices
 
-### Generated prompt outline (`build-subagents`)
+### Generated prompt (`build-subagents`)
+
+Verbatim output of `internal/prompt.BuildSubagentsPrompt` with placeholder config values substituted (`<SpecsDir>`, `<SpecsIndexFile>`, `<ImplementationPlanName>` from config exactly as in `build-classic`; `<COMPLETION_SIGNAL>` replaced by the loop at runtime).
 
 ```markdown
 # Agent Instructions (Build Mode with Subagents)
@@ -237,8 +239,6 @@ internal/
 - Keep a `Manual Deployment Tasks` section in the plan and use `None` when there are no tasks.
 - You may add temporary logging as needed and remove if no longer needed.
 ```
-
-`<SpecsDir>`, `<SpecsIndexFile>`, and `<ImplementationPlanName>` are substituted from config exactly as in `build-classic`; `<COMPLETION_SIGNAL>` is replaced by the loop at runtime.
 
 ### Migration notes
 

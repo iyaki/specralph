@@ -48,7 +48,7 @@ internal/
 | Placeholder | Source | Notes |
 | ----------- | ------ | ----- |
 | `<SpecsDir>` | `SpecsDir` | |
-| `<INDEX_REFERENCE>` | `SpecsDir` + `SpecsIndexFile` | ` (including `<SpecsDir>/<SpecsIndexFile>` and related specs)` when `SpecsIndexFile` is set and `NoSpecsIndex` is false; empty otherwise |
+| `<SpecsIndexFile>` | `SpecsIndexFile` | the parenthetical `(including `<SpecsDir>/<SpecsIndexFile>` and related specs)` is omitted entirely when `SpecsIndexFile` is empty or `NoSpecsIndex` is true |
 | `<ImplementationPlanName>` | `ImplementationPlanName` | |
 
 ## Workflows
@@ -96,10 +96,12 @@ internal/
 
 ### Instruction contract
 
+Verbatim output of `internal/prompt.BuildPrompt` with placeholder config values substituted; the only variation is the conditional index parenthetical (see substitutions above). With `--no-specs-index`, the first line renders as ``- Study `<SpecsDir>/*`.``
+
 ```markdown
 # Agent Instructions (Build Mode)
 
-- Study `<SpecsDir>/*`<INDEX_REFERENCE>.
+- Study `<SpecsDir>/*` (including `<SpecsDir>/<SpecsIndexFile>` and related specs).
 - Study `<ImplementationPlanName>` and pick the single most important task.
 - Implement the task
 - Validate the implementation
@@ -126,7 +128,7 @@ internal/
 - You may add temporary logging as needed and remove if no longer needed.
 ```
 
-(The `Manual Deployment Tasks` line's awkward wrapping is preserved verbatim from the generator.)
+(The `Manual Deployment Tasks` line's awkward wrapping is preserved verbatim from the generator; the generator appends one trailing newline after the last line.)
 
 ## Related Specifications
 
