@@ -216,7 +216,10 @@ func specsStudyLine(cfg *config.Config) string {
 
 	specsIndexFileReferenceText := ""
 	if specsIndexFileReference != "" {
-		specsIndexFileReferenceText = fmt.Sprintf(" (including `%s` and related specs)", specsIndexFileReference)
+		specsIndexFileReferenceText = fmt.Sprintf(
+			" (including `%s` and related specs) with as many subagents as you need to learn the application specifications",
+			specsIndexFileReference,
+		)
 	}
 
 	return fmt.Sprintf("- Study `%s/*`%s.", cfg.SpecsDir, specsIndexFileReferenceText)
@@ -305,7 +308,7 @@ func planStudyAndGapLines(cfg *config.Config) []string {
 	return []string{
 		"## Study and Gap Analysis",
 		"",
-		fmt.Sprintf("- Study `%s/*` to learn application requirements.", cfg.SpecsDir),
+		fmt.Sprintf("- Study `%s/*` with as many subagents as you need to learn application requirements.", cfg.SpecsDir),
 		fmt.Sprintf("- Study `%s` (if present; it may be incorrect).", cfg.ImplementationPlanName),
 		"- Study relevant source code to compare against specs.",
 		"- Use `git` to study recent changes on the specs related to the specified current scope.",

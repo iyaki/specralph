@@ -35,7 +35,8 @@ func TestBuildSubagentsPromptMatchesSpecOutline(t *testing.T) {
 	want := joinSpecOutlineLines(
 		"# Agent Instructions (Build Mode with Subagents)",
 		"",
-		"- Study `specs/*` (including `specs/README.md` and related specs).",
+		"- Study `specs/*` (including `specs/README.md` and related specs) "+
+			"with as many subagents as you need to learn the application specifications.",
 		"- Study `IMPLEMENTATION_PLAN.md` and select the next pending tasks, up to a maximum of 10.",
 		"- If no tasks are pending, verify the plan is complete and reply with `<COMPLETION_SIGNAL>`.",
 		"",

@@ -211,7 +211,7 @@ Verbatim output of `internal/prompt.BuildSubagentsPrompt` with placeholder confi
 ```markdown
 # Agent Instructions (Build Mode with Subagents)
 
-- Study `<SpecsDir>/*` (including `<SpecsDir>/<SpecsIndexFile>` and related specs).
+- Study `<SpecsDir>/*` (including `<SpecsDir>/<SpecsIndexFile>` and related specs) with as many subagents as you need to learn the application specifications.
 - Study `<ImplementationPlanName>` and select the next pending tasks, up to a maximum of 10.
 - If no tasks are pending, verify the plan is complete and reply with `<COMPLETION_SIGNAL>`.
 

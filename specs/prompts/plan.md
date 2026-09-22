@@ -115,7 +115,7 @@ Plan only. Do NOT implement anything.
 
 ## Study and Gap Analysis
 
-- Study `<SpecsDir>/*` to learn application requirements.
+- Study `<SpecsDir>/*` with as many subagents as you need to learn application requirements.
 - Study `<ImplementationPlanName>` (if present; it may be incorrect).
 - Study relevant source code to compare against specs.
 - Use `git` to study recent changes on the specs related to the specified current scope.

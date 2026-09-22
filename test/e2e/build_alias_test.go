@@ -16,7 +16,8 @@ func TestE2EBuildAliasDefaultResolvesBuildClassic(t *testing.T) {
 			ExpectedStdoutContains: []string{
 				"USING DEFAULT 'BUILD-CLASSIC' PROMPT",
 				"# Agent Instructions (Build Mode)",
-				"- Study `specs/*` (including `specs/README.md` and related specs).",
+				"- Study `specs/*` (including `specs/README.md` and related specs) " +
+					"with as many subagents as you need to learn the application specifications.",
 				"[build-classic]",
 			},
 			ForbiddenOutput: []string{
