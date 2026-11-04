@@ -14,7 +14,7 @@ func WriteConfig(path string, cfg *Config) error {
 	// Create a temporary file in the same directory as the target file
 	// to ensure we can rename it atomically (same filesystem).
 	dir := filepath.Dir(path)
-	const dirPerm = 0755
+	const dirPerm = 0750
 	if err := os.MkdirAll(dir, dirPerm); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}

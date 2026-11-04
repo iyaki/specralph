@@ -52,8 +52,8 @@ The directory defaults to .agents/skills. Use --force to overwrite an existing i
 // runSkillInstall writes the embedded skill to <dir>/specralph-prompts/SKILL.md.
 func runSkillInstall(output io.Writer, dir string, force bool) error {
 	const (
-		dirPerm  = 0755
-		filePerm = 0644
+		dirPerm  = 0750
+		filePerm = 0600
 	)
 
 	target := filepath.Join(dir, "specralph-prompts", "SKILL.md")
