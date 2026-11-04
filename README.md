@@ -50,12 +50,12 @@ Spec-driven development reduces ambiguity and keeps AI agents focused on concret
 | Claude Code | `claude` | `claude` |
 | OpenCode | `opencode` | `opencode` |
 | Cursor | `cursor` | `cursor` |
-| Oh My Pi (version >= 17.0.0) | `omp` (also `oh-my-pi`) | `omp` |
+| Oh My Pi (version >= 17.0.0) | `oh-my-pi` (alias `omp`) | `omp` |
 | OpenAI Codex | `codex` | `codex` |
 | GitHub Copilot | `copilot` | `copilot` |
 | Google Antigravity | `antigravity` (alias `agy`) | `agy` |
 
-The `agent` config value accepts `agy` as an alias for `antigravity`; `antigravity` is the single canonical name used in documentation.
+The `agent` config value accepts `agy` as an alias for `antigravity` and `omp` as an alias for `oh-my-pi`; a single canonical name per agent is used in documentation.
 
 
 `model` and `agent-mode` are forwarded when the selected agent CLI supports them.
@@ -365,7 +365,7 @@ HTTP_PROXY = "http://127.0.0.1:8080"
 | `RALPH_LOG_ENABLED` | Boolean: `1` or `true` enables logging, `0` or `false` disables it |
 | `RALPH_LOG_APPEND` | Boolean: `1` or `true` appends, `0` or `false` truncates on start |
 | `RALPH_PROMPTS_DIR` | Override `prompts-dir` |
-| `RALPH_AGENT` | Select the agent: `opencode`, `claude`, or `cursor` |
+| `RALPH_AGENT` | Select the agent (supported names and aliases in [Supported Agents](#supported-agents)) |
 | `RALPH_MODEL` | Override `model` |
 | `RALPH_AGENT_MODE` | Override `agent-mode` |
 

@@ -2,10 +2,11 @@
 # This file demonstrates all available configuration options
 
 # AI Agent Configuration
-# Supported values: omp, oh-my-pi, opencode, claude, cursor, codex, copilot, antigravity
+# Supported values: oh-my-pi, opencode, claude, cursor, codex, copilot, antigravity
+# Aliases: omp (oh-my-pi), agy (antigravity)
 # - opencode (default): Uses the opencode CLI tool
 # - claude: Uses the Claude Code CLI tool
-# - antigravity: Uses the agy CLI tool (agy is accepted as an alias)
+# - antigravity: Uses the agy CLI tool
 agent = "opencode"
 model = "gpt-4"
 # Optional agent mode/sub-agent (if supported by the CLI)

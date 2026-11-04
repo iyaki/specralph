@@ -43,7 +43,7 @@ var agentSelectionTestCases = []TestCase{
 		},
 		ExpectedExitCode: 0,
 		ExpectedStdoutContains: []string{
-			"Using agent: omp",
+			"Using agent: oh-my-pi",
 			"[ralph-test-agent] Args:",
 			"--print",
 			"--no-title",

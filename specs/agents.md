@@ -116,7 +116,7 @@ specs/
 
 1. Read `AgentName` from config (see configuration spec).
 2. Map `AgentName` to a concrete agent implementation.
-3. Accepted names are canonical names plus aliases; alias `agy` maps to `AntigravityAgent`, whose canonical name is `antigravity` (`Name()` returns `"antigravity"`).
+3. Accepted names are canonical names plus aliases; alias `agy` maps to `AntigravityAgent` (canonical `antigravity`) and alias `omp` maps to `OmpAgent` (canonical `oh-my-pi`); `Name()` returns the canonical name.
 
 ### Select agent (unknown configured agent)
 
@@ -182,6 +182,8 @@ specs/
  - `ralph --agent antigravity build` invokes `agy -p "build"`.
  - `ralph --agent antigravity --model "Gemini 2.5 Flash" build` includes `--model "Gemini 2.5 Flash"`.
  - `ralph --agent agy build` invokes `agy -p "build"` (same as `antigravity`).
+ - `ralph --agent oh-my-pi build` invokes `omp`.
+ - `ralph --agent omp build` behaves identically to `oh-my-pi`.
  - Configuring an unknown agent fails with an error listing every supported agent name.
 
 ## Appendices
