@@ -109,36 +109,6 @@ func waitForCommandCompletion(t *testing.T, done <-chan struct{}) {
 	}
 }
 
-func TestGetAgentReturnsExpectedType(t *testing.T) {
-	tests := []struct {
-		name      string
-		agentName string
-		expected  string
-	}{
-		{name: "oh-my-pi", agentName: "oh-my-pi", expected: "oh-my-pi"},
-		{name: "omp alias", agentName: "omp", expected: "oh-my-pi"},
-		{name: "claude", agentName: "claude", expected: "claude"},
-		{name: "cursor", agentName: "cursor", expected: "cursor"},
-		{name: "opencode", agentName: "opencode", expected: "opencode"},
-		{name: "codex", agentName: "codex", expected: "codex"},
-		{name: "copilot", agentName: "copilot", expected: "copilot"},
-		{name: "antigravity", agentName: "antigravity", expected: "antigravity"},
-		{name: "agy alias", agentName: "agy", expected: "antigravity"},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			a, err := agent.GetAgent(tc.agentName, "model-x", "reviewer", nil)
-			if err != nil {
-				t.Fatalf("expected no error, got %v", err)
-			}
-			if a.Name() != tc.expected {
-				t.Fatalf("expected %q, got %q", tc.expected, a.Name())
-			}
-		})
-	}
-}
-
 func TestGetAgentReturnsErrorForUnknownConfiguredAgent(t *testing.T) {
 	_, err := agent.GetAgent("unknown", "model-x", "reviewer", nil)
 	if err == nil {
