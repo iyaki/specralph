@@ -34,6 +34,7 @@ internal/
     agent.go
     opencode.go
     claude.go
+    cursor.go
     oh-my-pi.go
     codex.go
     copilot.go
@@ -43,23 +44,10 @@ specs/
     opencode.md
     claude.md
     cursor.md
+    oh-my-pi.md
     codex.md
     copilot.md
     antigravity.md
-```
-internal/
-  agent/
-    agent.go
-    opencode.go
-    claude.go
-    oh-my-pi.go
-    codex.go
-    copilot.go
-specs/
-  agents/
-    opencode.md
-    claude.md
-    cursor.md
 ```
 
 ### Component diagram (ASCII)
@@ -105,6 +93,10 @@ specs/
   - `Name() string`
   - `IsAvailable() bool`
 
+- Agent registry (package-level helpers in `internal/agent`)
+  - `SupportedAgents() []string` — canonical agent names; the single source of truth feeding `ralph init` options/prompt and unknown-agent error messages.
+  - `IsSupportedAgent(name string) bool` — true for canonical names and accepted aliases.
+
 - AgentSelection
   - Fields: `AgentName`, `Model`, `AgentMode`.
   - Derived from config/flags/environment variables.
@@ -124,6 +116,7 @@ specs/
 
 1. Read `AgentName` from config (see configuration spec).
 2. Map `AgentName` to a concrete agent implementation.
+3. Accepted names are canonical names plus aliases; alias `agy` maps to `AntigravityAgent`, whose canonical name is `antigravity` (`Name()` returns `"antigravity"`).
 
 ### Select agent (unknown configured agent)
 
@@ -188,6 +181,8 @@ specs/
  - `ralph --agent copilot --agent explore build` includes `--agent explore`.
  - `ralph --agent antigravity build` invokes `agy -p "build"`.
  - `ralph --agent antigravity --model "Gemini 2.5 Flash" build` includes `--model "Gemini 2.5 Flash"`.
+ - `ralph --agent agy build` invokes `agy -p "build"` (same as `antigravity`).
+ - Configuring an unknown agent fails with an error listing every supported agent name.
 
 ## Appendices
 

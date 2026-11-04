@@ -170,7 +170,7 @@ specs/
 
 | Field            | Type   | Default           | Description                                      |
 | ---------------- | ------ | ----------------- | ------------------------------------------------ |
-| `AgentName`      | string | `"antigravity"`   | Must be `"antigravity"` for this agent.          |
+| `AgentName`      | string | `"antigravity"`   | Accepted values: `antigravity` (canonical) or `agy` (alias). |
 | `Model`          | string | `"Gemini 2.5 Pro"`| Model override (e.g., `Gemini 2.5 Flash`).       |
 | `SandboxMode`    | string | `"off"`           | Sandbox execution policy.                        |
 | `ToolPermission` | string | `"always-proceed"`| Tool approval behavior for automation.           |
@@ -186,8 +186,8 @@ specs/
 ### Example Configuration
 
 ```toml
-# Ralph config.toml
-agent_name = "antigravity"
+# Ralph ralph.toml
+agent = "antigravity"
 model = "Gemini 2.5 Flash"
 sandbox_mode = "off"
 tool_permission = "always-proceed"

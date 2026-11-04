@@ -145,7 +145,7 @@ internal/
 | `--log-truncate`                   | `LogTruncate`            | Truncate log file before writing                |
 | `--prompt`                         | `CustomPrompt`           | Inline custom prompt                            |
 | `--build-alias-prompt`             | `BuildAliasPrompt`       | Prompt name the `build` alias resolves to       |
-| `--agent`, `-a`                    | `AgentName`              | Agent name (`opencode`, `claude`, `cursor`)     |
+| `--agent`, `-a`                    | `AgentName`              | Agent name (supported names and aliases in [agents.md](agents.md)) |
 | `--model`                          | `Model`                  | Model name passed to the agent CLI              |
 | `--agent-mode`                     | `AgentMode`              | Agent mode/sub-agent passed to the agent CLI    |
 | `--env`                            | `Env`                    | Repeatable `KEY=VALUE` child agent env override |
