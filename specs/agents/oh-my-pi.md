@@ -52,7 +52,7 @@ specs/
 
 ### Data flow summary
 
-1. Ralph selects `omp` when `AgentName` is `omp`.
+1. Ralph selects the Oh My Pi agent when `AgentName` is `oh-my-pi` (canonical) or `omp` (alias).
 2. The agent builds CLI args based on `Model` and `AgentMode`.
 3. The agent executes `omp --print --no-title ... <prompt>` and returns output.
 

@@ -115,8 +115,8 @@ func TestGetAgentReturnsExpectedType(t *testing.T) {
 		agentName string
 		expected  string
 	}{
-		{name: "omp", agentName: "omp", expected: "omp"},
-		{name: "oh-my-pi", agentName: "oh-my-pi", expected: "omp"},
+		{name: "oh-my-pi", agentName: "oh-my-pi", expected: "oh-my-pi"},
+		{name: "omp alias", agentName: "omp", expected: "oh-my-pi"},
 		{name: "claude", agentName: "claude", expected: "claude"},
 		{name: "cursor", agentName: "cursor", expected: "cursor"},
 		{name: "opencode", agentName: "opencode", expected: "opencode"},
@@ -155,7 +155,7 @@ func TestGetAgentReturnsErrorForUnknownConfiguredAgent(t *testing.T) {
 }
 
 func TestSupportedAgents(t *testing.T) {
-	expected := []string{"omp", "oh-my-pi", "opencode", "claude", "cursor", "codex", "copilot", "antigravity"}
+	expected := []string{"oh-my-pi", "opencode", "claude", "cursor", "codex", "copilot", "antigravity"}
 	got := agent.SupportedAgents()
 	if !equalStringSlices(got, expected) {
 		t.Fatalf("expected %v, got %v", expected, got)
@@ -172,7 +172,10 @@ func TestIsSupportedAgent(t *testing.T) {
 	if !agent.IsSupportedAgent("agy") {
 		t.Fatal("expected alias \"agy\" to be supported")
 	}
-	for _, name := range []string{"", "invalid", "AGY", "Codex"} {
+	if !agent.IsSupportedAgent("omp") {
+		t.Fatal("expected alias \"omp\" to be supported")
+	}
+	for _, name := range []string{"", "invalid", "AGY", "OMP", "Codex"} {
 		if agent.IsSupportedAgent(name) {
 			t.Fatalf("expected %q to be unsupported", name)
 		}
@@ -332,7 +335,7 @@ func TestOmpExecuteAndAvailability(t *testing.T) {
 	if !a.IsAvailable() {
 		t.Fatal("expected omp to be available")
 	}
-	if a.Name() != "omp" {
+	if a.Name() != "oh-my-pi" {
 		t.Fatalf("unexpected name: %s", a.Name())
 	}
 

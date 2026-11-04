@@ -23,9 +23,9 @@ func (a *OmpAgent) Execute(prompt string, output io.Writer) (string, error) {
 	return executeAgentCommand("omp", args, a.Env, output, "omp")
 }
 
-// Name returns the name of the agent.
+// Name returns the canonical name of the agent.
 func (a *OmpAgent) Name() string {
-	return "omp"
+	return "oh-my-pi"
 }
 
 // IsAvailable checks if omp is available in PATH.

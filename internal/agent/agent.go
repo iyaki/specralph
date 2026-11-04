@@ -21,11 +21,12 @@ type Agent interface {
 
 // supportedAgents lists canonical agent names in the order they are offered
 // by `ralph init` and referenced in error messages.
-var supportedAgents = []string{"omp", "oh-my-pi", "opencode", "claude", "cursor", "codex", "copilot", "antigravity"}
+var supportedAgents = []string{"oh-my-pi", "opencode", "claude", "cursor", "codex", "copilot", "antigravity"}
 
 // agentAliases maps accepted aliases to their canonical agent name.
 var agentAliases = map[string]string{
 	"agy": "antigravity",
+	"omp": "oh-my-pi",
 }
 
 // SupportedAgents returns the canonical supported agent names.
@@ -50,9 +51,7 @@ func GetAgent(agentName, model, agentMode string, env []string) (Agent, error) {
 	effectiveEnv := cloneStringSlice(env)
 
 	switch agentName {
-	case "omp":
-		return &OmpAgent{Model: model, AgentMode: agentMode, Env: effectiveEnv}, nil
-	case "oh-my-pi":
+	case "oh-my-pi", "omp":
 		return &OmpAgent{Model: model, AgentMode: agentMode, Env: effectiveEnv}, nil
 	case "claude":
 		return &ClaudeAgent{Model: model, AgentMode: agentMode, Env: effectiveEnv}, nil
