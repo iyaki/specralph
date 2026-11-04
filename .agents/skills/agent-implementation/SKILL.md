@@ -48,6 +48,7 @@ Use this skill when the task involves any of the following:
 
 - Add `internal/agent/<new-agent>.go` with an `Agent` interface implementation.
 - Wire the new agent into the factory/switch in `internal/agent/agent.go`.
+- Register the canonical name in `SupportedAgents()` and any alias in the factory (`internal/agent/agent.go`); `ralph init` options/prompt and error messages derive from it automatically — no separate init list exists.
 - Reuse shared execution/helpers where possible instead of duplicating logic.
 
 ## Test Checklist
@@ -55,6 +56,7 @@ Use this skill when the task involves any of the following:
 At minimum, add coverage for:
 
 - Factory returns the correct implementation for the agent name.
+- `SupportedAgents`/`IsSupportedAgent` cover the new name and aliases.
 - Unsupported/invalid names return expected errors.
 - Command and argument composition for normal execution.
 - Failure paths (missing binary, non-zero exit, malformed output when relevant).
@@ -80,4 +82,4 @@ make mutation
 
 - Tests cover factory mapping plus success and error execution paths.
 - Local validation passes (or failures are clearly reported).
-- Specs/docs are updated when behavior changes.
+- Specs/docs are updated when behavior changes, including the README "Supported Agents" table and `specs/agents.md` in the same change.
