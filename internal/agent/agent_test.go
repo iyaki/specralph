@@ -123,6 +123,7 @@ func TestGetAgentReturnsExpectedType(t *testing.T) {
 		{name: "codex", agentName: "codex", expected: "codex"},
 		{name: "copilot", agentName: "copilot", expected: "copilot"},
 		{name: "antigravity", agentName: "antigravity", expected: "antigravity"},
+		{name: "agy alias", agentName: "agy", expected: "antigravity"},
 	}
 
 	for _, tc := range tests {
@@ -145,6 +146,36 @@ func TestGetAgentReturnsErrorForUnknownConfiguredAgent(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "unknown agent") {
 		t.Fatalf("expected unknown agent error, got %v", err)
+	}
+	for _, name := range agent.SupportedAgents() {
+		if !strings.Contains(err.Error(), name) {
+			t.Fatalf("expected error to list supported agent %q, got %v", name, err)
+		}
+	}
+}
+
+func TestSupportedAgents(t *testing.T) {
+	expected := []string{"omp", "oh-my-pi", "opencode", "claude", "cursor", "codex", "copilot", "antigravity"}
+	got := agent.SupportedAgents()
+	if !equalStringSlices(got, expected) {
+		t.Fatalf("expected %v, got %v", expected, got)
+	}
+}
+
+func TestIsSupportedAgent(t *testing.T) {
+	canonical := agent.SupportedAgents()
+	for _, name := range canonical {
+		if !agent.IsSupportedAgent(name) {
+			t.Fatalf("expected %q to be supported", name)
+		}
+	}
+	if !agent.IsSupportedAgent("agy") {
+		t.Fatal("expected alias \"agy\" to be supported")
+	}
+	for _, name := range []string{"", "invalid", "AGY", "Codex"} {
+		if agent.IsSupportedAgent(name) {
+			t.Fatalf("expected %q to be unsupported", name)
+		}
 	}
 }
 

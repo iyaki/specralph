@@ -4,6 +4,7 @@ package agent
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
 // Agent represents an AI agent CLI that can execute prompts.
@@ -16,6 +17,32 @@ type Agent interface {
 
 	// IsAvailable checks if the agent CLI is available on the system.
 	IsAvailable() bool
+}
+
+// supportedAgents lists canonical agent names in the order they are offered
+// by `ralph init` and referenced in error messages.
+var supportedAgents = []string{"omp", "oh-my-pi", "opencode", "claude", "cursor", "codex", "copilot", "antigravity"}
+
+// agentAliases maps accepted aliases to their canonical agent name.
+var agentAliases = map[string]string{
+	"agy": "antigravity",
+}
+
+// SupportedAgents returns the canonical supported agent names.
+func SupportedAgents() []string {
+	return append([]string(nil), supportedAgents...)
+}
+
+// IsSupportedAgent reports whether name is a canonical agent name or an accepted alias.
+func IsSupportedAgent(name string) bool {
+	for _, supported := range supportedAgents {
+		if name == supported {
+			return true
+		}
+	}
+	_, ok := agentAliases[name]
+
+	return ok
 }
 
 // GetAgent returns the appropriate agent based on configuration.
@@ -37,11 +64,9 @@ func GetAgent(agentName, model, agentMode string, env []string) (Agent, error) {
 		return &CodexAgent{Model: model, AgentMode: agentMode, Env: effectiveEnv}, nil
 	case "copilot":
 		return &CopilotAgent{Model: model, AgentMode: agentMode, Env: effectiveEnv}, nil
-	case "antigravity":
+	case "antigravity", "agy":
 		return &AntigravityAgent{Model: model, AgentMode: agentMode, Env: effectiveEnv}, nil
 	default:
-		supported := "omp, oh-my-pi, opencode, claude, cursor, codex, copilot, antigravity"
-
-		return nil, fmt.Errorf("unknown agent %q (supported: %s)", agentName, supported)
+		return nil, fmt.Errorf("unknown agent %q (supported: %s)", agentName, strings.Join(SupportedAgents(), ", "))
 	}
 }
