@@ -4,7 +4,7 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/iyaki/specralph/quality.yml)](https://github.com/iyaki/specralph/actions)
 [![License](https://img.shields.io/github/license/iyaki/specralph)](LICENSE)
 
-SpecRalph (formerly Ralphex) is a **spec-driven AI coding automation CLI** for developers. It orchestrates iterative development loops with external agent CLIs like **Claude Code, OpenCode, Cursor, and Oh My Pi**. Built with **Go** for **cross-platform** support (Linux, macOS, Windows), SpecRalph implements the [Ralph Wiggum methodology](https://ghuntley.com/ralph/) for **AI-assisted software development**: define specs, generate implementation plans, and execute automated coding loops until completion.
+SpecRalph (formerly Ralphex) is a **spec-driven AI coding automation CLI** for developers. It orchestrates iterative development loops with external agent CLIs like **Claude Code, OpenCode, Cursor, Oh My Pi, Codex, Copilot, and Antigravity**. Built with **Go** for **cross-platform** support (Linux, macOS, Windows), SpecRalph implements the [Ralph Wiggum methodology](https://ghuntley.com/ralph/) for **AI-assisted software development**: define specs, generate implementation plans, and execute automated coding loops until completion.
 
 SpecRalph wraps a supported agent CLI in a repeatable loop: resolve a prompt, run the agent, and repeat until the agent emits `<promise>COMPLETE</promise>` or max iterations is reached. Each pass works against the updated repository, which makes it a good fit for specs, implementation plans, and repository-local prompts.
 
@@ -45,15 +45,17 @@ Spec-driven development reduces ambiguity and keeps AI agents focused on concret
 
 ## Supported Agents
 
-| Agent | Binary |
-| --- | --- |
-| Claude Code | `claude` |
-| OpenCode | `opencode` |
-| Cursor | `cursor` |
-| Oh My Pi (version >= 17.0.0) | `omp` |
-| OpenAI Codex | `codex` |
-| GitHub Copilot | `copilot` |
-| Google Antigravity | `agy` |
+| Agent | Config value | CLI binary |
+| --- | --- | --- |
+| Claude Code | `claude` | `claude` |
+| OpenCode | `opencode` | `opencode` |
+| Cursor | `cursor` | `cursor` |
+| Oh My Pi (version >= 17.0.0) | `omp` (also `oh-my-pi`) | `omp` |
+| OpenAI Codex | `codex` | `codex` |
+| GitHub Copilot | `copilot` | `copilot` |
+| Google Antigravity | `antigravity` (alias `agy`) | `agy` |
+
+The `agent` config value accepts `agy` as an alias for `antigravity`; `antigravity` is the single canonical name used in documentation.
 
 
 `model` and `agent-mode` are forwarded when the selected agent CLI supports them.
