@@ -156,6 +156,10 @@ Each agent implementation is in its own file:
 - `internal/agent/opencode.go`: OpenCode CLI integration
 - `internal/agent/claude.go`: Claude CLI integration
 - `internal/agent/cursor.go`: Cursor CLI integration
+- `internal/agent/oh-my-pi.go`: Oh My Pi CLI integration
+- `internal/agent/codex.go`: OpenAI Codex CLI integration
+- `internal/agent/copilot.go`: GitHub Copilot CLI integration
+- `internal/agent/antigravity.go`: Google Antigravity CLI integration
 
 ## Adding Support for a New Agent
 
@@ -182,6 +186,7 @@ Recommended flow:
    - Add `internal/agent/<new-agent>.go`.
    - Implement the `Agent` interface in `internal/agent/agent.go`.
    - Wire the new agent in the factory.
+   - Register the canonical name in `SupportedAgents()` (`internal/agent/agent.go`) and any alias in the factory switch.
    - Keep behavior deterministic and avoid logging sensitive prompt/match text.
    - Reuse shared helpers instead of duplicating execution logic.
 

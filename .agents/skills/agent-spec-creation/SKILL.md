@@ -24,6 +24,7 @@ Use this skill when the task is to define or revise agent behavior, inputs, outp
    - `<agent-cli> --help`
    - relevant subcommand help (for example `<agent-cli> run --help`)
 4. Define explicit, testable requirements:
+   - canonical config name and accepted aliases: document one canonical name, list aliases explicitly (for example `antigravity` with alias `agy`)
    - command shape and required flags
    - environment variables
    - output parsing/streaming expectations
