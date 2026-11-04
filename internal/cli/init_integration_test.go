@@ -172,3 +172,41 @@ func TestExecuteInitCommand_WriteInitConfigError(t *testing.T) {
 		t.Logf("got error: %v", err)
 	}
 }
+
+// TestExecuteInitCommand_ForcePreservesCodexAgent verifies that init --force
+// over an existing config keeps its registry-supported agent value.
+func TestExecuteInitCommand_ForcePreservesCodexAgent(t *testing.T) {
+	original := cli.GetIsInteractiveTerminalForTest()
+	cli.SetIsInteractiveTerminalForTest(true)
+	t.Cleanup(func() { cli.SetIsInteractiveTerminalForTest(original) })
+
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "ralph.toml")
+	originalConfig := "agent = \"codex\"\nmax-iterations = 25\n"
+	if err := os.WriteFile(configPath, []byte(originalConfig), 0600); err != nil {
+		t.Fatalf("failed to seed existing config: %v", err)
+	}
+
+	// Accept all defaults (agent prompt defaults to codex), confirm write
+	input := strings.Repeat("\n", 10) + "yes\n"
+
+	cmd := &cobra.Command{}
+	cmd.SetIn(strings.NewReader(input))
+	output := &bytes.Buffer{}
+	cmd.SetOut(output)
+
+	if err := cli.ExecuteInitCommandForTest(cmd, configPath, true); err != nil {
+		t.Fatalf("executeInitCommand failed: %v", err)
+	}
+
+	written, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("failed to read generated config: %v", err)
+	}
+	if !strings.Contains(string(written), "agent = \"codex\"") {
+		t.Fatalf("expected generated config to preserve agent = \"codex\", got:\n%s", written)
+	}
+	if !strings.Contains(output.String(), "codex") {
+		t.Fatalf("expected prompt output to list codex, got:\n%s", output.String())
+	}
+}
