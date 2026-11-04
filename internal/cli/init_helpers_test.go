@@ -408,7 +408,7 @@ func TestParseConfirmAnswer(t *testing.T) {
 
 func TestValidateInitAgent(t *testing.T) {
 	t.Run("valid agent returns nil", func(t *testing.T) {
-		validAgents := []string{"opencode", "claude", "cursor"}
+		validAgents := []string{"opencode", "claude", "cursor", "codex", "copilot", "antigravity", "agy"}
 		for _, agent := range validAgents {
 			if err := validateInitAgent(agent); err != nil {
 				t.Errorf("expected nil error for %q, got %v", agent, err)

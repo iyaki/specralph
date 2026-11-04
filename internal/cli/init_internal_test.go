@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
+	"github.com/iyaki/specralph/internal/agent"
 	"github.com/iyaki/specralph/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -151,7 +152,7 @@ func TestInitCommandAsksQuestionsInSpecifiedOrder(t *testing.T) {
 	}
 
 	assertOutputContainsPromptsInOrder(t, out.String(), []string{
-		"AI agent (omp/opencode/claude/cursor/oh-my-pi)",
+		"AI agent (" + strings.Join(agent.SupportedAgents(), "/") + ")",
 		"Model (optional)",
 		"Agent mode/sub-agent (optional)",
 		"Maximum iterations",
@@ -306,7 +307,7 @@ func seededInitConfigLines() []string {
 func seededInitPromptDefaults() []string {
 	return []string{
 		"Overwrite existing configuration? [no]:",
-		"AI agent (omp/opencode/claude/cursor/oh-my-pi) [claude]:",
+		"AI agent (" + strings.Join(agent.SupportedAgents(), "/") + ") [claude]:",
 		"Model (optional) [gpt-4o-mini]:",
 		"Agent mode/sub-agent (optional):",
 		"Maximum iterations [7]:",

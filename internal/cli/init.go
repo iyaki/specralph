@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/iyaki/specralph/internal/agent"
 	"github.com/iyaki/specralph/internal/config"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -69,8 +70,6 @@ const (
 	questionKeyLogTruncate            = "log-truncate"
 	questionKeyWriteConfiguration     = "write-configuration"
 )
-
-var supportedInitAgents = []string{"omp", "opencode", "claude", "cursor", "oh-my-pi"}
 
 var errInvalidConfirmAnswer = errors.New("please answer yes or no")
 
@@ -523,9 +522,9 @@ func baseInitQuestions(defaults *InitAnswers) []InitQuestion {
 	return []InitQuestion{
 		newSelectQuestion(
 			questionKeyAgentName,
-			"AI agent (omp/opencode/claude/cursor/oh-my-pi)",
+			"AI agent ("+strings.Join(agent.SupportedAgents(), "/")+")",
 			defaults.AgentName,
-			supportedInitAgents,
+			agent.SupportedAgents(),
 			validateInitAgent,
 		),
 		newInputQuestion(questionKeyModel, "Model (optional)", defaults.Model, false, nil),
@@ -814,13 +813,11 @@ func boolToConfirmValue(value bool) string {
 }
 
 func validateInitAgent(value string) error {
-	for _, agentName := range supportedInitAgents {
-		if value == agentName {
-			return nil
-		}
+	if agent.IsSupportedAgent(value) {
+		return nil
 	}
 
-	return fmt.Errorf("must be one of: %s", strings.Join(supportedInitAgents, ", "))
+	return fmt.Errorf("must be one of: %s", strings.Join(agent.SupportedAgents(), ", "))
 }
 
 func validatePositiveInitInteger(value string) error {
