@@ -172,7 +172,7 @@ specs/
 
 | Prompt                                    | Config key                 | Type    | Default                  | Validation                      |
 | ----------------------------------------- | -------------------------- | ------- | ------------------------ | ------------------------------- |
-| AI agent (`omp`, `opencode`, `claude`, `cursor`, `oh-my-pi`) | `agent`                    | select  | `opencode`               | Must be one of supported agents |
+| AI agent (supported agents, see [agents.md](../agents.md)) | `agent`                    | select  | `opencode`               | Must be a supported agent name or alias |
 | Model (optional)                          | `model`                    | input   | empty (not written)      | Free text; empty allowed        |
 | Agent mode/sub-agent (optional)           | `agent-mode`               | input   | empty (not written)      | Free text; empty allowed        |
 | Maximum iterations                        | `max-iterations`           | input   | `25`                     | Integer > 0                     |
@@ -225,6 +225,8 @@ The `build-alias-prompt` key is not asked as a question; it is always written wi
 - Running `ralph init` without a TTY exits non-zero with a clear guidance message.
 - A generated config is loaded successfully by existing config resolution logic.
 - A generated `ralph.toml` always contains `build-alias-prompt = "build-subagents"`, including when overwriting an existing config.
+- Entering `codex` at the agent prompt is accepted and written as `agent = "codex"`.
+- Running `ralph init --force` over a config with `agent = "codex"` defaults the agent prompt to `codex`, and accepting defaults preserves it.
 
 ## Appendices
 ### Example generated config (accept defaults)
